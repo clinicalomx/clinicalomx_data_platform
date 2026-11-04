@@ -1,0 +1,21 @@
+data_dir: general_labels
+
+inputs:
+  thumbnails:
+    kind: collection
+    key: clinical-roi/thumbnails    
+  notes:
+    kind: artifact
+    key: general_labels/notes.json # class-id mapping
+    source: notes.json # actual file
+
+outputs:
+  labels:
+    key: clinical-roi/general/labels   # stable key, versioned per round; pinned by lineage to the thumbnails version
+    description: "Per-round YOLO labels for the annotated thumbnails collection version."
+
+parameters:
+  label_import:
+    # Set to the LS JSON (full) export (relative to data_dir) to capture prelabel
+    # provenance; leave null for the legacy YOLO .txt export (labels only) in data_dir.
+    tasks_json: null

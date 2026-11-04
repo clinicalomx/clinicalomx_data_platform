@@ -1,0 +1,27 @@
+[project]
+name = "hpc-worker"
+version = "0.1.0"
+description = "Custom Prefect worker that pushes flow runs to HPC SLURM over SSH."
+# Copyright 2026 ClinicalOMXLab
+license = "Apache-2.0"
+requires-python = ">=3.10"
+dependencies = [
+    "prefect==3.6.27",
+    "psycopg2-binary>=2.9",
+    "pydantic>=2",
+]
+
+# Registers the hpc-slurm-ssh-pusher worker type so that
+# `prefect worker start -p hpc-ssh-pool` can resolve it from the pool type.
+[project.entry-points."prefect.collections"]
+hpc_slurm_ssh_pusher = "worker"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+# Flat modules for now: config/connection/worker/deploy are installed as
+# top-level modules to match their flat imports (from config import ...).
+# A later cleanup could convert these to an hpc package with relative imports.
+[tool.setuptools]
+py-modules = ["config", "connection", "worker", "deploy"]

@@ -1,0 +1,28 @@
+# Release the scripts under scripts/release/
+name: release-scripts
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/release/**"
+      - ".github/workflows/release-scripts.yml"
+  pull_request:
+    paths:
+      - "scripts/release/**"
+      - ".github/workflows/release-scripts.yml"
+
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: shellcheck
+        run: shellcheck scripts/release/*.sh scripts/release/tests/*.sh
+
+      - name: assemble-release.sh survives two tags on one commit and leaves nothing half-done
+        run: scripts/release/tests/test-assemble-release.sh
+
+      - name: prune-releases.sh keeps every tree in use
+        run: scripts/release/tests/test-prune-releases.sh

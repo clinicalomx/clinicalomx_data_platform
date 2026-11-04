@@ -1,0 +1,20 @@
+control_plane = {
+  instance_name = "clinicalomxhub-staging" # per-env name (prod would differ)
+  platform_release_tag = "platform-v2"
+
+  ssh_ingress_cidrs = [
+    "REPLACE.WITH.YOUR.IP/32",
+  ]
+
+  external_network_name = "REPLACE-WITH-EXTERNAL-NETWORK"
+  os_auth_url           = "https://keystone.example.edu/v3/"
+
+  extra_ssh_authorized_keys = [
+    # "ssh-ed25519 AAAA... you@laptop",
+  ]
+}
+
+# The object store's S3 endpoint, the same value as AWS_ENDPOINT_URL_S3 in .envrc.
+package_index = {
+  s3_endpoint = "https://objects.example.edu/"
+}

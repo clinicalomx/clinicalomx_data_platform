@@ -1,0 +1,107 @@
+[project]
+name = "clinicalomx_markers"
+version = "0.1.0"
+description = "Canonical imaging-marker registry for the clinicalOMx instance: identity from UniProt, segmentation roles annotated alongside."
+readme = "README.md"
+# Copyright 2026 ClinicalOMXLab
+license = "Apache-2.0"
+requires-python = ">=3.11"
+# pydantic is declared even though clinicalomx already pulls it in: the ledger's
+# `grammar/model.py` imports it directly, for `Claim`, `Verdict` and `Judgement`, and
+# depending on somebody else's dependency is not a dependency. A clinicalomx release that dropped it would break this
+# package with no warning from the resolver.
+#
+# Only pydantic v2's own surface is used, which has been stable since 2.0: ConfigDict,
+# model_validator, model_fields, model_copy. The upper bound is there because v3 would be a
+# different API, the same shape the clinicalomx range has.
+dependencies = [
+    "clinicalomx[vocab]>=0.1,<0.2",
+    # The claim/verdict grammar and both ClaimStore backends. A hard dependency since the
+    # grammar moved there: `domain/marker.py` imports it at module scope, so it is no longer
+    # something a consumer can opt out of. The `store` extra is the LedgerClaimStore's
+    # lamindb half. No new install weight: the ledger's own base dependency is the same
+    # lamindb==2.8.1 pin clinicalomx already carries.
+    #
+    # Bounded, for the same reason the clinicalomx range above is: this became a PUBLISHED
+    # requirement when markers moved onto the index, and an unbounded one would let a future
+    # ledger take the grammar somewhere else and reach an image nobody rebuilt on purpose.
+    # The upper bound is the next minor because the ledger is pre-1.0, where that is where a
+    # breaking change lands.
+    "clinicalomx_ledger[store]>=0.1,<0.2",
+    # The reagent inventory and its claim-free checks, maintained apart from the marker code.
+    # `domain/imaging_channel.py` and `vocab.py` import it at module scope. Bounded to the
+    # next minor for the ledger's reason: pre-1.0, a breaking change lands there.
+    "clinicalomx_reagents>=0.1,<0.2",
+    "pydantic>=2,<3",
+]
+
+[project.optional-dependencies]
+# The authoring-time proposer: reads unresolved channel names, calls UniProt, drafts registry
+# rows, opens a pull request. NEVER a runtime dependency of the seeder -- a model must not run
+# at apply time. tests/test_boundaries.py asserts the core import does not reach these.
+# Endpoint-agnostic: the OpenAI client talks to any chat-completions server,
+# including a local vLLM one.
+agent = ["openai>=1.40", "httpx>=0.27"]
+# Reading an .xlsx vendor inventory in `sources.sheet`. A .csv needs nothing; openpyxl is
+# imported only when an .xlsx is opened.
+sheet = ["openpyxl>=3.1.5"]
+# The curation HTTP API in `clinicalomx_markers.api`. Starlette because that is what Reflex 0.9
+# is underneath: the routes are handed to the host's `rx.App` as its `api_transformer`, so the
+# Reflex process serves them and no second service exists.
+api = ["starlette>=0.40"]
+
+# clinicalomx advertises this so `clinicalomx-vocab audit` can attribute these names to this
+# repo instead of reporting them as (unowned).
+[project.entry-points."clinicalomx.vocabulary"]
+clinicalomx_markers = "clinicalomx_markers.vocab:VOCAB"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv.sources]
+clinicalomx = { path = "../clinicalomx" }
+clinicalomx_ledger = { path = "../clinicalomx_ledger" }
+clinicalomx_reagents = { path = "../clinicalomx_reagents" }
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/clinicalomx_markers"]
+
+[dependency-groups]
+# openai is a test dependency as well as an optional runtime one: one test monkeypatches
+# openai.OpenAI to check the client-building path, so a plain `uv sync` without it fails
+# collection-time-clean but red. It belongs here rather than being guarded with importorskip,
+# which would let CI skip it silently. The `agent` extra stays the consumer-facing opt-in, and
+# test_boundaries.py still enforces the real property: installed is not imported.
+#
+# openpyxl is here for the same reason: `tests/test_sheet_reader.py` reads a real .xlsx, and
+# starlette and httpx because `tests/test_api.py` drives the `api` extra's routes.
+dev = ["pytest>=8.0", "ruff>=0.6", "openai>=1.40", "openpyxl>=3.1.5", "starlette>=0.40",
+       "httpx>=0.27"]
+# The Postgres half of the suite (tests_pg/): a throwaway postgres:18 container and a
+# disposable lamin instance carrying the ledger module. Not in `dev` so the offline suite
+# stays databaseless; run with `uv sync --group pg`, then `uv run pytest tests_pg`.
+pg = ["testcontainers[postgres]>=4", "psycopg2-binary>=2.9", {include-group = "app"}]
+# The curation review page (`clinicalomx.curation`), which `clinicalomx/run_curation_app.sh`
+# serves with this package's API mounted beneath it. A group and not an extra: the page is the
+# clinicalomx wheel's, and a consumer of the API never needs Reflex. `pg` includes it because
+# `tests_pg/test_standalone_app.py` starts that app against the disposable instance.
+app = ["clinicalomx[app]"]
+etl-agent = [
+    "openpyxl>=3.1.5",
+]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+# Pinned explicitly so a local run and CI see the same rules.
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "C4", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# `tests.conftest` is imported by name for shared fixture data. Without this, collection
+# depends on the repo root happening to be on sys.path, which `python -m pytest` provides and
+# `uv run pytest` does not.
+pythonpath = ["."]

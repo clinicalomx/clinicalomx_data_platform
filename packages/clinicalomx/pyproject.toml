@@ -1,0 +1,114 @@
+[project]
+name = "clinicalomx"
+version = "0.1.0"
+description = "The lamindb foundation layer for the clinicalOMx instance: vocabulary, ROI relations, environment, inputs and human-in-the-loop gates."
+readme = "README.md"
+# Copyright 2026 ClinicalOMXLab
+license = "Apache-2.0"
+requires-python = ">=3.11"
+dependencies = [
+    # Must be >= the instance DB schema version, or a behind package refuses to connect.
+    # lamindb is PINNED EXACTLY and must match every other environment that touches the
+    # clinicalOMx instance (clinicalomx-pipeline, clinicalomx, the croi inference wheels, the
+    # workers, the bgnorm image). Two reasons a floor is not enough:
+    #  - a package BEHIND the instance's DB schema (2.8.1) refuses to connect;
+    #  - 2.8.x changed how Artifact.suffix is derived (CanonicalSuffix is MIME-based), so `.qptiff`
+    #    records as "" where older versions wrote ".qptiff". Mixed versions left the instance
+    #    holding both spellings and silently broke every filter(suffix=...) query.
+    # Bump the instance and ALL pins together, then rebuild the SIFs and images.
+    "lamindb==2.8.1",
+    "pydantic>=2.12",
+    "pydantic-settings[yaml]>=2.14",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+# The vocabulary SEEDER (clinicalomx.vocab plan/apply/check/audit). Kept out of the core
+# so importing constants does not pull an ontology stack onto every compute node; the
+# seeder is a deployment tool, run from the container and CI.
+vocab = ["bionty"]
+# review.py can emit Prefect events on a gate confirmation; only needed if you drive the
+# gates with Prefect Automations (event delivery is otherwise injectable, so the core
+# stays orchestrator-blind).
+prefect = ["prefect>=3.0"]
+# models.py can download portable model checkpoints from an MLflow tracking server; only
+# needed when a ModelRef has to fall back to the MLflow side (mlflow is lazily imported,
+# so lamindb-only model resolution works without it).
+# The byte-touching builders. Kept out of core deliberately: spatialdata transitively pulls
+# anndata, xarray, dask, zarr, geopandas, shapely, numpy and pandas, and every compute node, every
+# worker and every consumer wheel installs this distribution. `plan` never needs any of it -
+# Recipe.builder is a dotted path resolved inside assemble() - so only the machine that actually
+# builds something pays. Widening the solve that must also satisfy the exact lamindb pin is the
+# cost being avoided here.
+extract = [
+  "spatialdata>=0.2",
+  "tifffile>=2024.1",
+  # The OME model. tifffile can emit OME-XML from a metadata dict, but not a MULTI-SERIES one
+  # with per-channel colour, emission and fluor - which is the difference between a file an
+  # analyst can open and one where the channels are called Channel:0..n.
+  "ome-types>=0.5",
+  "anndata>=0.10",
+  # OME-NGFF 0.5 metadata lives in a Zarr V3 `zarr.json`, so the v3 line is a real floor rather
+  # than a preference. spatialdata already pulls zarr in; `builders/ngff.py` imports it directly,
+  # which is what makes declaring it honest.
+  "zarr>=3",
+  "pyarrow>=15",
+  "geopandas>=1.0",
+]
+# The Extract Explorer UI. Reflex only - the app imports the extract layer, so building
+# anything also needs [extract]; browsing what exists does not.
+#
+# NO STREAMLIT. The Explorer moved to Reflex; `extract/app/web/` is the whole UI and nothing under
+# `clinicalomx` imports streamlit any more. The review app in `clinicalomx_pipelines` is still a
+# Streamlit app and is unaffected - the two share only this wheel, and this wheel no longer
+# carries a UI framework either of them disagrees about.
+#
+# THE `dot` BINARY IS NOT IN HERE and cannot be: `extract/app/diagram.py` emits DOT and
+# `web/dot.py` shells out to render it, which is a system package (`apt-get install graphviz`),
+# not a wheel. Its absence is REPORTED on the page rather than drawn around, so an environment
+# without it still runs; `qptiff_pipeline/Dockerfile.build` installs it.
+# httpx is declared, not borrowed from reflex: `clinicalomx.curation.client` calls the curation
+# API with it directly.
+app = ["reflex>=0.9.11,<0.10", "httpx>=0.27"]
+models = ["mlflow>=2.16"]
+
+[project.scripts]
+clinicalomx-vocab = "clinicalomx.vocab.__main__:main"
+clinicalomx-checks = "clinicalomx.checks.__main__:main"
+clinicalomx-extract = "clinicalomx.extract.__main__:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+sources = ["src"]
+only-include = ["src/clinicalomx"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+# Pinned explicitly so a local run and CI see the same rules.
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "C4", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+# The TYPE_CHECKING block re-exports for type checkers; the names are unused at runtime
+# by design, since __getattr__ resolves them lazily.
+"src/clinicalomx/__init__.py" = ["F401"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = [
+  # zarr v3 warns on every consolidated-metadata write. The imaging fixtures write a lot of tiny
+  # zarrs, and eleven copies of a warning about a spec detail we do not control buries the ones
+  # that matter.
+  "ignore:Consolidated metadata is currently not part in the Zarr format 3 specification:UserWarning",
+]

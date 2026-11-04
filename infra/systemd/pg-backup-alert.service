@@ -1,0 +1,7 @@
+# Monorepo-release render; provenance in infra/systemd/README.md.
+[Unit]
+Description=Alert on clinicalomxdb pg-backup failure
+
+[Service]
+Type=oneshot
+ExecStart=/opt/clinicalomx_data_platform/current/packages/clinicalomxdb/hub-database/scripts/pg-backup-alert.sh

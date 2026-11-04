@@ -1,0 +1,9 @@
+services:
+  hpc:
+    image: giovtorres/slurm-docker-cluster:latest
+    container_name: hpc
+    volumes:
+      - rdm_emulated:/QRISdata # mimic qrisdata mount
+
+volumes:
+  rdm_emulated:

@@ -1,0 +1,23 @@
+# Keep the build context small and free of local dev state. The image builds its own
+# venv (Dockerfile.review), so a local .venv must never be copied in or `uv venv` fails
+# with "already exists".
+.venv/
+# The local UI-iteration venv (dev_review_app.sh): ~800MB of wheels the image must never carry.
+.venv-review-dev/
+**/__pycache__/
+*.pyc
+.git/
+qptiff_pipeline/.github/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+notebooks/
+qptiff_pipeline/docs/
+.env
+*.env
+review.env
+
+# Reflex build output. Hundreds of megabytes of node_modules and Vite scratch; the image
+# builds its own inside the builder stage and copies only .web/build out of it.
+.web/

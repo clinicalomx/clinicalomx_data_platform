@@ -1,0 +1,52 @@
+[Unit]
+Description=clinicalOMx DB schema review renderer for the operator portal (/schema-review/)
+After=network-online.target docker.service
+Wants=network-online.target
+# Deliberately NOT Requires=docker.service. It serves the LAST rendered page, which is a file, so
+# it must keep answering while Docker is down and say plainly that a re-render failed. The same
+# argument the health endpoint makes for being a host unit.
+
+# This file is a TEMPLATE, matching the health and login units. bootstrap.sh substitutes
+# @REVIEW_DIR@ / @REPO_DIR@ / @RUN_USER@ / @RUN_HOME@ / @LAMIN_HOME@ and installs the result to
+# /etc/systemd/system. Do not enable this file directly.
+
+[Service]
+Type=simple
+User=@RUN_USER@
+Group=@RUN_USER@
+# It runs `make schema-review`, which drives docker compose, so it needs the account that owns the
+# checkout and is in the docker group, and that account's HOME for ~/.docker/config.json.
+Environment=HOME=@RUN_HOME@
+Environment=PYTHONUNBUFFERED=1
+Environment=REVIEW_REPO_DIR=@REPO_DIR@
+Environment=REVIEW_LAMIN_HOME=@LAMIN_HOME@
+Environment=REVIEW_STATE_DIR=/var/lib/ops-schema-review
+ExecStart=/usr/bin/python3 @REVIEW_DIR@/review_server.py
+
+# The rendered page outlives a restart and a reboot, so it lives here rather than under /run.
+# systemd creates it owned by User= on every start.
+StateDirectory=ops-schema-review
+StateDirectoryMode=0755
+
+# Serves over a unix socket in /run/ops-schema-review rather than a TCP port, so there is no port
+# for anything but the portal to reach. Caddy bind-mounts this directory.
+# Preserve=yes matters: without it systemd removes the directory on stop, and the Caddy container's
+# bind mount would keep pointing at the deleted inode, so restarting this unit would silently break
+# the tab until Caddy was restarted too.
+RuntimeDirectory=ops-schema-review
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=yes
+Restart=always
+RestartSec=5
+
+# KillMode=control-group, the default, is what stops a restart from leaving an orphaned render:
+# the whole process group started by ExecStart goes with the unit. A render killed that way can
+# still leave its compose container behind, because --rm is the CLI removing it on exit and the
+# CLI is what was killed; `docker ps` is where that shows up.
+ProtectSystem=full
+ProtectHome=no
+PrivateTmp=yes
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

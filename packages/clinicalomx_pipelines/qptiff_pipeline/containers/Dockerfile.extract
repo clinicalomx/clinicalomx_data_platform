@@ -1,0 +1,74 @@
+# Runtime image for extract-assemble: the ONLY environment that can run clinicalomx's builders.
+#
+# WHY THIS EXISTS. `clinicalomx[extract]` - the builders' format stack, listed in
+# packages/clinicalomx/pyproject.toml - is installed by NOTHING that runs on the HPC, and that is deliberate everywhere it is
+# true. The light image (Dockerfile.qptiff) exists to be light and adding the geo and scverse stack
+# to it would undo the whole reason it was split out; the bgnorm image carries bgnorm's pins; the
+# croi objective images belong to the detector and happen to carry spatialdata for `dearray_sdata`,
+# which is a coincidence, not a contract, and they lack ome-types outright. The Build app installs
+# `clinicalomx[app]` and NOT `[extract]` on purpose, because the control plane must never read a
+# byte of storage.
+#
+# So the flow that assembles had nowhere to run, and this is that place: the orchestration stack
+# (prefect + lamindb, which the hpc worker execs into) plus the builders and the qptiff reader.
+# The flow code arrives by git_clone at run time and is NOT copied here, exactly as Dockerfile.qptiff
+# arranges it, which is what lets the image outlive a flow edit.
+#
+# WHAT IS NOT INSTALLED, and why it does not need to be: `clinicalomx-pipeline` itself. The flow
+# calls `qptiff_pipeline.domain.governance.register()`, which loads this repo's folder table into
+# the framework without an entry point - the same call check-qptiffs, bgnorm-core and harvest-feedback
+# already make, for the same reason (a git_cloned repo has no installed distribution metadata, so
+# `discover()` finds nothing and every folder resolves to UNDECLARED).
+#
+# TAG SCHEME, copied from Dockerfile.qptiff because the hazard is identical: SIFs are cached on the HPC
+# BY PATH, so an image whose contents moved under an unchanged tag means every run keeps executing
+# the previous SIF. The tag therefore names both things that decide the contents - the clinicalomx
+# framework, which is where the builders live, and the qptiff reader commit. CI derives it from the
+# two ARGs below, so this file stays the single source of truth.
+#
+# Build manually (CI does this on a push that touches this file, and after a clinicalomx release):
+#   uv build --wheel --out-dir dist ../clinicalomx     # from packages/clinicalomx_pipelines
+#   docker build -f qptiff_pipeline/containers/Dockerfile.extract \
+#     -t ghcr.io/<owner>/comx-extract:cx0.1.0-bio23e46aa .
+FROM python:3.12-slim
+
+# git: lamindb shells out to it for run provenance, and the reader is a git dependency (below).
+# The reader repo is PUBLIC, so no credential is needed for that clone.
+RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+# EXACT pins while pyproject.toml declares ranges, for Dockerfile.qptiff's reason: the tag above
+# encodes these versions and is what the SIF path is derived from, so a range would let two builds
+# under one tag hold different contents.
+#
+# clinicalomx must be >= the release that carries `extract.submit`, since the flow rehydrates the
+# payload through it, and the SAME release the Build app resolves - a control plane and a worker on
+# different token formulas is precisely what `rehydrate` refuses, so a skew here is a run that
+# refuses rather than a run that builds something else. That refusal is the safety net, not the plan.
+#
+# lamindb must equal the instance's DB schema and every other environment that writes to it.
+ARG CLINICALOMX_VERSION=0.1.0
+ARG BIOIO_QPTIFF_COMMIT=23e46aaa39a3d9c2adcce33d20fe691e1fc75d2a
+
+# First-party code is a wheel built from this checkout into dist/ by the image workflow. A
+# `name @ file://` requirement cannot be satisfied by any index, so no published clinicalomx can
+# be selected in its place.
+COPY dist /src/dist
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --system \
+      "prefect>=3.0" \
+      "lamindb==2.8.1" \
+      "clinicalomx[extract,prefect] @ file:///src/dist/clinicalomx-${CLINICALOMX_VERSION}-py3-none-any.whl" \
+      "bioio" \
+      "bioio-qptiff @ git+https://github.com/rtubelleza/bioio-qptiff@${BIOIO_QPTIFF_COMMIT}" \
+      "numpy>=1.26"
+
+# Asserts rather than imports, for Dockerfile.qptiff's reasons plus one of this image's own: the
+# BUILDERS are the point of it, and an image where `clinicalomx.extract.assemble` cannot resolve its
+# dotted builder paths is an image whose only job fails at the last moment, inside a SLURM job, after
+# the allocation is spent. `resolve_dotted` is the exact call `assemble` makes. The extra is imported
+# from the INSTALLED wheel's own metadata, never a list written here, so this check cannot fall behind
+# what `clinicalomx[extract]` declares (tools/drift/extract_extra.py refuses a copy).
+CMD ["python", "-c", "import importlib, importlib.metadata as md, re, prefect, clinicalomx, lamindb, bioio, bioio_qptiff; ex = [re.match(r'[A-Za-z0-9._-]+', q).group(0).replace('-', '_') for q in md.requires('clinicalomx') if 'extract' in q.partition(';')[2]]; assert ex, 'clinicalomx declares no extract extra'; [importlib.import_module(m) for m in ex]; from clinicalomx.extract import all_recipes; from clinicalomx.extract.assemble import resolve_dotted; assert lamindb.__version__ == '2.8.1', f'lamindb {lamindb.__version__} != pinned 2.8.1'; assert hasattr(bioio_qptiff, 'LOCUS_PER_PAGE_ROOT'), 'reader predates the channel-locus fix'; rs = all_recipes(); assert rs, 'no recipes resolve'; [resolve_dotted(d) for r in rs for d in (r.builder, *r.placements.values()) if d]; print('comx-extract image OK (lamindb', lamindb.__version__, '| clinicalomx', clinicalomx.__version__, '|', len(rs), 'recipes)')"]

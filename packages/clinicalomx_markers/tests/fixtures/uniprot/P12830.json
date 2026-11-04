@@ -1,0 +1,1582 @@
+{
+  "headers": {
+    "content-type": "application/json",
+    "x-uniprot-release": "2026_02",
+    "x-uniprot-release-date": "10-June-2026"
+  },
+  "body": {
+    "entryType": "UniProtKB reviewed (Swiss-Prot)",
+    "primaryAccession": "P12830",
+    "proteinDescription": {
+      "recommendedName": {
+        "fullName": {
+          "evidences": [
+            {
+              "evidenceCode": "ECO:0000312",
+              "source": "HGNC",
+              "id": "HGNC:1748"
+            }
+          ],
+          "value": "Cadherin-1"
+        }
+      },
+      "alternativeNames": [
+        {
+          "fullName": {
+            "value": "CAM 120/80"
+          }
+        },
+        {
+          "fullName": {
+            "evidences": [
+              {
+                "evidenceCode": "ECO:0000305"
+              }
+            ],
+            "value": "Epithelial cadherin"
+          },
+          "shortNames": [
+            {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000312",
+                  "source": "HGNC",
+                  "id": "HGNC:1748"
+                }
+              ],
+              "value": "E-cadherin"
+            }
+          ]
+        },
+        {
+          "fullName": {
+            "evidences": [
+              {
+                "evidenceCode": "ECO:0000303",
+                "source": "PubMed",
+                "id": "8459805"
+              }
+            ],
+            "value": "Uvomorulin"
+          }
+        }
+      ],
+      "cdAntigenNames": [
+        {
+          "value": "CD324"
+        }
+      ],
+      "contains": [
+        {
+          "recommendedName": {
+            "fullName": {
+              "value": "E-Cad/CTF1"
+            }
+          }
+        },
+        {
+          "recommendedName": {
+            "fullName": {
+              "value": "E-Cad/CTF2"
+            }
+          }
+        },
+        {
+          "recommendedName": {
+            "fullName": {
+              "value": "E-Cad/CTF3"
+            }
+          }
+        }
+      ],
+      "flag": "Precursor"
+    },
+    "genes": [
+      {
+        "geneName": {
+          "evidences": [
+            {
+              "evidenceCode": "ECO:0000312",
+              "source": "HGNC",
+              "id": "HGNC:1748"
+            }
+          ],
+          "value": "CDH1"
+        },
+        "synonyms": [
+          {
+            "value": "CDHE"
+          },
+          {
+            "evidences": [
+              {
+                "evidenceCode": "ECO:0000312",
+                "source": "HGNC",
+                "id": "HGNC:1748"
+              }
+            ],
+            "value": "UVO"
+          }
+        ]
+      }
+    ],
+    "comments": [
+      {
+        "texts": [
+          {
+            "evidences": [
+              {
+                "evidenceCode": "ECO:0000250",
+                "source": "UniProtKB",
+                "id": "F1PAA9"
+              },
+              {
+                "evidenceCode": "ECO:0000269",
+                "source": "PubMed",
+                "id": "11976333"
+              },
+              {
+                "evidenceCode": "ECO:0000269",
+                "source": "PubMed",
+                "id": "16417575"
+              },
+              {
+                "evidenceCode": "ECO:0000269",
+                "source": "PubMed",
+                "id": "29999492"
+              }
+            ],
+            "value": "Cadherins are calcium-dependent cell adhesion proteins (PubMed:11976333). They preferentially interact with themselves in a homophilic manner in connecting cells; cadherins may thus contribute to the sorting of heterogeneous cell types. CDH1 is involved in mechanisms regulating cell-cell adhesions, mobility and proliferation of epithelial cells (PubMed:11976333). Promotes organization of radial actin fiber structure and cellular response to contractile forces, via its interaction with AMOTL2 which facilitates anchoring of radial actin fibers to CDH1 junction complexes at the cell membrane (By similarity). Plays a role in the early stages of desmosome cell-cell junction formation via facilitating the recruitment of DSG2 and DSP to desmosome plaques (PubMed:29999492). Has a potent invasive suppressor role. It is a ligand for integrin alpha-E/beta-7"
+          }
+        ],
+        "commentType": "FUNCTION"
+      },
+      {
+        "texts": [
+          {
+            "evidences": [
+              {
+                "evidenceCode": "ECO:0000269",
+                "source": "PubMed",
+                "id": "16417575"
+              }
+            ],
+            "value": "E-Cad/CTF2 promotes non-amyloidogenic degradation of Abeta precursors. Has a strong inhibitory effect on APP C99 and C83 production"
+          }
+        ],
+        "commentType": "FUNCTION"
+      },
+      {
+        "texts": [
+          {
+            "evidences": [
+              {
+                "evidenceCode": "ECO:0000269",
+                "source": "PubMed",
+                "id": "10406800"
+              },
+              {
+                "evidenceCode": "ECO:0000269",
+                "source": "PubMed",
+                "id": "17540170"
+              },
+              {
+                "evidenceCode": "ECO:0000269",
+                "source": "PubMed",
+                "id": "8601315"
+              }
+            ],
+            "value": "(Microbial infection) Serves as a receptor for Listeria monocytogenes; internalin A (InlA) binds to this protein and promotes uptake of the bacteria"
+          }
+        ],
+        "commentType": "FUNCTION"
+      },
+      {
+        "commentType": "SUBCELLULAR LOCATION",
+        "note": {
+          "texts": [
+            {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000250",
+                  "source": "UniProtKB",
+                  "id": "P09803"
+                },
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "25208567"
+                },
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "29999492"
+                }
+              ],
+              "value": "Colocalizes with DLGAP5 at sites of cell-cell contact in intestinal epithelial cells. Anchored to actin microfilaments through association with alpha-, beta- and gamma-catenin. Sequential proteolysis induced by apoptosis or calcium influx, results in translocation from sites of cell-cell contact to the cytoplasm. Colocalizes with RAB11A endosomes during its transport from the Golgi apparatus to the plasma membrane. Recruited to desmosomes at the initial assembly phase and also accumulates progressively at mature desmosome cell-cell junctions (PubMed:25208567, PubMed:29999492). Localizes to cell-cell contacts as keratinocyte differentiation progresses (By similarity)"
+            }
+          ]
+        },
+        "subcellularLocations": [
+          {
+            "location": {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "18343367"
+                },
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "22294297"
+                },
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "27760340"
+                },
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "28169360"
+                }
+              ],
+              "value": "Cell junction, adherens junction",
+              "id": "SL-0009"
+            }
+          },
+          {
+            "location": {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "19403558"
+                },
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "20859650"
+                },
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "28301459"
+                },
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "36309486"
+                }
+              ],
+              "value": "Cell membrane",
+              "id": "SL-0039"
+            },
+            "topology": {
+              "value": "Single-pass type I membrane protein",
+              "id": "SL-9905"
+            }
+          },
+          {
+            "location": {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "15689490"
+                }
+              ],
+              "value": "Endosome",
+              "id": "SL-0101"
+            }
+          },
+          {
+            "location": {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "15689490"
+                }
+              ],
+              "value": "Golgi apparatus, trans-Golgi network",
+              "id": "SL-0266"
+            }
+          },
+          {
+            "location": {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "22294297"
+                }
+              ],
+              "value": "Cytoplasm",
+              "id": "SL-0086"
+            }
+          },
+          {
+            "location": {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "25208567"
+                },
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "29999492"
+                },
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "33596089"
+                }
+              ],
+              "value": "Cell junction, desmosome",
+              "id": "SL-0092"
+            }
+          }
+        ]
+      },
+      {
+        "commentType": "SUBCELLULAR LOCATION",
+        "note": {
+          "texts": [
+            {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "34742300"
+                }
+              ],
+              "value": "(Microbial infection) Proteolytically cleaved at the cell membrane upon H.pylori infection"
+            }
+          ]
+        },
+        "subcellularLocations": [
+          {
+            "location": {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "34742300"
+                }
+              ],
+              "value": "Secreted",
+              "id": "SL-0243"
+            }
+          }
+        ]
+      }
+    ],
+    "uniProtKBCrossReferences": [
+      {
+        "database": "GO",
+        "id": "GO:0015629",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:actin cytoskeleton"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "16338932"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005912",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:adherens junction"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "18343367"
+          },
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "22294297"
+          },
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "24046456"
+          },
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "27760340"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0043296",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:apical junction complex"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "10460003"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0016342",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:catenin complex"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "18593713"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0030054",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:cell junction"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "28169360"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005737",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:cytoplasm"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "22294297"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0009898",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:cytoplasmic side of plasma membrane"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "20189993"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0030057",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:desmosome"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "29999492"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0031901",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:early endosome membrane"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "TAS:Reactome"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005788",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:endoplasmic reticulum lumen"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "TAS:Reactome"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005789",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:endoplasmic reticulum membrane"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "TAS:Reactome"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0070062",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:extracellular exosome"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "HDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0007005",
+            "source": "PubMed",
+            "id": "23533145"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005576",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:extracellular region"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "TAS:Reactome"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0016600",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:flotillin complex"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "24046456"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0098978",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:glutamatergic synapse"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:Ensembl"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005794",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:Golgi apparatus"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:HPA"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005796",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:Golgi lumen"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "TAS:Reactome"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0000139",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:Golgi membrane"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "TAS:Reactome"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0030027",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:lamellipodium"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "24046456"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0016328",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:lateral plasma membrane"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "16338932"
+          },
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "17620337"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005765",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:lysosomal membrane"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "TAS:Reactome"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0016020",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:membrane"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "16338932"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0048471",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:perinuclear region of cytoplasm"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "16338932"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005886",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:plasma membrane"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "20859650"
+          },
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "28301459"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0098794",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:postsynapse"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:Ensembl"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005802",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:trans-Golgi network"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IMP:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000315",
+            "source": "PubMed",
+            "id": "17620337"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0030506",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:ankyrin binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IPI:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000353",
+            "source": "PubMed",
+            "id": "17620337"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0008013",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:beta-catenin binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "17620337"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0045296",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:cadherin binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "HDA:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0007005",
+            "source": "PubMed",
+            "id": "25468996"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005509",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:calcium ion binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:InterPro"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0098631",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:cell adhesion mediator activity"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProt"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "11976333"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0050839",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:cell adhesion molecule binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IPI:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000353",
+            "source": "PubMed",
+            "id": "21724833"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0045295",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:gamma-catenin binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IPI:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000353",
+            "source": "PubMed",
+            "id": "1639850"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0032794",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:GTPase activating protein binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IPI:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000353",
+            "source": "PubMed",
+            "id": "20116244"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0042802",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:identical protein binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IPI:IntAct"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000353",
+            "source": "PubMed",
+            "id": "19114658"
+          },
+          {
+            "evidenceCode": "ECO:0000353",
+            "source": "PubMed",
+            "id": "19646884"
+          },
+          {
+            "evidenceCode": "ECO:0000353",
+            "source": "PubMed",
+            "id": "21300292"
+          },
+          {
+            "evidenceCode": "ECO:0000353",
+            "source": "PubMed",
+            "id": "23112161"
+          },
+          {
+            "evidenceCode": "ECO:0000353",
+            "source": "PubMed",
+            "id": "24725409"
+          },
+          {
+            "evidenceCode": "ECO:0000353",
+            "source": "PubMed",
+            "id": "35922511"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:1990782",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:protein tyrosine kinase binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:Ensembl"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0034332",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:adherens junction organization"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IMP:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000315",
+            "source": "PubMed",
+            "id": "21724833"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0016339",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:calcium-dependent cell-cell adhesion"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IBA:GO_Central"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0016477",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:cell migration"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IBA:GO_Central"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0000902",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:cell morphogenesis"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IBA:GO_Central"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0098609",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:cell-cell adhesion"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "16338932"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0044331",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:cell-cell adhesion mediated by cadherin"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "18593713"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0007043",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:cell-cell junction assembly"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IBA:GO_Central"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0071681",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:cellular response to indole-3-methanol"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "10868478"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0071285",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:cellular response to lithium ion"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "12937339"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0002159",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:desmosome assembly"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IMP:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000315",
+            "source": "PubMed",
+            "id": "29999492"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0007156",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:homophilic cell-cell adhesion"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "NAS:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000303",
+            "source": "PubMed",
+            "id": "8033105"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0030517",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:negative regulation of axon extension"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:Ensembl"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0030336",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:negative regulation of cell migration"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IMP:ARUK-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000315",
+            "source": "PubMed",
+            "id": "16882694"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0022408",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:negative regulation of cell-cell adhesion"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IMP:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000315",
+            "source": "PubMed",
+            "id": "19653274"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0031175",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:neuron projection development"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:Ensembl"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0021983",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:pituitary gland development"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:Ensembl"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0045893",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:positive regulation of DNA-templated transcription"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "16338932"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0042307",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:positive regulation of protein import into nucleus"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "16338932"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:1903829",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:positive regulation of protein localization"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IMP:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000315",
+            "source": "PubMed",
+            "id": "29999492"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0072659",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:protein localization to plasma membrane"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "17620337"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0010468",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:regulation of gene expression"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IMP:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000315",
+            "source": "PubMed",
+            "id": "19403558"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0099576",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:regulation of protein catabolic process at postsynapse, modulating synaptic transmission"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:Ensembl"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0140459",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:response to Gram-positive bacterium"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:Ensembl"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0071503",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:response to heparin"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:Ensembl"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0009636",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:response to toxic substance"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:Ensembl"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0009410",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:response to xenobiotic stimulus"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:Ensembl"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0007416",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:synapse assembly"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IBA:GO_Central"
+          }
+        ]
+      }
+    ],
+    "extraAttributes": {
+      "uniParcId": "UPI00000341EF"
+    }
+  }
+}

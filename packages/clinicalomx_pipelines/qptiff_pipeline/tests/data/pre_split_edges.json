@@ -1,0 +1,105 @@
+{
+  "EDGES": [
+    {
+      "deployment": "check-general-detect/pipeline-check-general-detect",
+      "description": "(paused) registered WholeSlide -> check-general-detect; superseded by mint-completion + heartbeat",
+      "enabled": false,
+      "name": "slide-registered-general-detect",
+      "on_event": "clinical-roi.slide.registered",
+      "param": "slide_uids",
+      "uid_key": "record_uid"
+    },
+    {
+      "deployment": "general-persist/pipeline-general-persist",
+      "description": "general accepted -> general-persist",
+      "enabled": true,
+      "name": "general-accepted-persist",
+      "on_event": "clinical-roi.general.accepted",
+      "param": "slide_uids",
+      "uid_key": "record_uid"
+    },
+    {
+      "deployment": "core-detect/pipeline-core-detect",
+      "description": "registered TMA -> core-detect",
+      "enabled": true,
+      "name": "tma-registered-core-detect",
+      "on_event": "clinical-roi.tma.registered",
+      "param": "tma_uids",
+      "uid_key": "tma_uid"
+    },
+    {
+      "deployment": "core-persist/pipeline-core-persist",
+      "description": "core accepted -> core-persist",
+      "enabled": true,
+      "name": "core-accepted-persist",
+      "on_event": "clinical-roi.core.accepted",
+      "param": "tma_uids",
+      "uid_key": "record_uid"
+    },
+    {
+      "deployment": "reset-slide/pipeline-reset-slide",
+      "description": "reset requested runs reset-slide (teardown core/bgnorm, back to general_pending)",
+      "enabled": true,
+      "name": "slide-reset-teardown",
+      "on_event": "clinical-roi.slide.reset",
+      "param": "slide_uids",
+      "uid_key": "record_uid"
+    }
+  ],
+  "FLOW_EDGES": [
+    {
+      "deployment": "check-qptiffs/pipeline-check-qptiffs",
+      "description": "register-qptiffs completed -> check-qptiffs (integrity gate)",
+      "name": "register-qptiffs-check-qptiffs",
+      "on_state": "Completed",
+      "parameters": {},
+      "source_deployment": "register-qptiffs/pipeline-register-qptiffs"
+    },
+    {
+      "deployment": "mint-slides/pipeline-mint-slides",
+      "description": "check-qptiffs completed -> mint-slides (mint integrity-ok qptiffs)",
+      "name": "check-qptiffs-mint-slides",
+      "on_state": "Completed",
+      "parameters": {},
+      "source_deployment": "check-qptiffs/pipeline-check-qptiffs"
+    },
+    {
+      "deployment": "check-general-detect/pipeline-check-general-detect",
+      "description": "mint-slides completed -> check-general-detect (per-batch gate -> general-detect)",
+      "name": "mint-slides-general-detect",
+      "on_state": "Completed",
+      "parameters": {},
+      "source_deployment": "mint-slides/pipeline-mint-slides"
+    },
+    {
+      "deployment": "check-general-detect/pipeline-check-general-detect",
+      "description": "general-detect completed -> check-general-detect (sweep slides registered mid-run)",
+      "name": "general-detect-recheck",
+      "on_state": "Completed",
+      "parameters": {},
+      "source_deployment": "general-detect/pipeline-general-detect"
+    },
+    {
+      "deployment": "harvest-feedback/pipeline-harvest-feedback",
+      "description": "general-persist completed -> harvest-feedback (rebuild general training-reference Collection)",
+      "name": "general-persist-harvest",
+      "on_state": "Completed",
+      "parameters": {
+        "dry_run": false,
+        "stage": "general"
+      },
+      "source_deployment": "general-persist/pipeline-general-persist"
+    },
+    {
+      "deployment": "harvest-feedback/pipeline-harvest-feedback",
+      "description": "core-persist completed -> harvest-feedback (rebuild core training-reference Collection)",
+      "name": "core-persist-harvest",
+      "on_state": "Completed",
+      "parameters": {
+        "dry_run": false,
+        "stage": "core"
+      },
+      "source_deployment": "core-persist/pipeline-core-persist"
+    }
+  ]
+}

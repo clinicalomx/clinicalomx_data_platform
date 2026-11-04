@@ -1,0 +1,59 @@
+# Publish clinicalomx_reagents to the private index on its release tag. 
+# the tag namespace is <distribution>-v<version> using the
+name: release-clinicalomx-reagents
+
+on:
+  push:
+    tags: ["clinicalomx_reagents-v*"]
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: packages/clinicalomx_reagents
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    env:
+      INDEX_BUCKET: ${{ vars.INDEX_BUCKET }}
+      UV_S3_ENDPOINT_URL: ${{ vars.UV_S3_ENDPOINT_URL }}
+      AWS_REGION: us-east-1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      # Both copies, for the reason release-clinicalomx-markers.yml states at length.
+      - name: Tag matches both declared versions
+        run: |
+          tagged="${GITHUB_REF_NAME#clinicalomx_reagents-v}"
+          declared="$(uv version --short --color never)"
+          dunder="$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' src/clinicalomx_reagents/__init__.py)"
+          fail=0
+          if [ "$declared" != "$tagged" ]; then
+            echo "pyproject.toml declares $declared, tag says $tagged" >&2
+            fail=1
+          fi
+          if [ "$dunder" != "$tagged" ]; then
+            echo "__init__.py declares '$dunder', tag says $tagged" >&2
+            fail=1
+          fi
+          exit "$fail"
+
+      # No index credential anywhere before the publish step: the package has no runtime
+      # dependency, so the wheel installs from nothing but itself.
+      - name: The lock matches the metadata
+        run: uv lock --check
+
+      - name: Build the sdist and the wheel
+        run: uv build
+
+      - name: Publish to the private index
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.INDEX_PUBLISH_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.INDEX_PUBLISH_SECRET_ACCESS_KEY }}
+        run: uv run --no-project --with boto3 python ../clinicalomx/scripts/publish_index.py dist/*

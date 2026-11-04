@@ -1,0 +1,20 @@
+# CANONICAL ANALYTES, one row per marker, named once per lab.
+#
+# The column contract is declared in ../seed_spec.py, not here, and seed_data/README.md is
+# generated from it. A renamed or missing column fails on read.
+#
+# Identity only. How a marker was measured lives in channels.csv, and anything derived from
+# an external source lives as a claim with its own provenance. Which proteins a marker binds
+# is one of those: a target claim, seeded from targets.csv.
+#
+# status: active | draft   (draft rows are validated on every run but never seeded)
+canonical_name,full_name,status
+DAPI,"4',6-diamidino-2-phenylindole (DNA stain, not a protein)",draft
+E-CADHERIN,E-cadherin (CDH1),draft
+NAKATPASE,Sodium/potassium-transporting ATPase subunit alpha-1 (ATP1A1),draft
+VIMENTIN,Vimentin (VIM),draft
+CITRATE_SYNTHASE,"Citrate synthase, mitochondrial (CS)",draft
+LDHA,L-lactate dehydrogenase A chain (LDHA),draft
+FOXP3,Forkhead box protein P3 (FOXP3),draft
+CD8A,T-cell surface glycoprotein CD8 alpha chain (CD8A),draft
+BLANK,Empty / blank acquisition channel,draft

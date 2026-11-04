@@ -1,0 +1,16 @@
+[
+  {
+    "state": "prompt",
+    "prompt": "Enter a passcode from Duo Mobile:",
+    "secret": true,
+    "message": "",
+    "emits": "Duo two-factor login for alice\n\nEnter a passcode from Duo Mobile: "
+  },
+  {
+    "state": "done",
+    "prompt": "",
+    "secret": false,
+    "message": "connected; session established for alice",
+    "emits": "\n"
+  }
+]

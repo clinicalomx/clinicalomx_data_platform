@@ -1,0 +1,30 @@
+# Run this stage with: python -m croi tissue_objects extract-pyramid
+#
+# One low-res pyramid channel-projection PNG per QPTIFF: the substrate for a
+# raw-image ROI detector (independent of the thumbnail detector). Read straight
+# from the QPTIFF pyramid, so MODEL-INDEPENDENT: it doesn't change when the
+# general detector improves; versioned only for handoff symmetry with tma_crops.
+#
+# inputs   = the QPTIFFs to process (a DISCOVERED query, like 0_ingest).
+# outputs  = the per-QPTIFF projection Artifacts + the frozen release Collection.
+data_dir: shared/pyramid_low_scale
+
+inputs:
+  qptiffs:
+    query: artifacts
+    suffix: .qptiff
+    exclude_key_contains: [dmso, "/._"]   # drop DMSO controls + macOS resource-fork sidecars
+
+outputs:
+  projections:
+    key_prefix: shared/pyramid_low_scale   # per qptiff: shared/pyramid_low_scale/<stem>.png (in-place)
+    key_template: "shared/pyramid_low_scale/{stem}.png"   # per-artifact key (materialize output)
+    description: "Low-res pyramid channel-projection of a QPTIFF."
+  release:
+    key: clinical-roi/shared/pyramid_low_scale   # the frozen release Collection (core pins this)
+    description: "Frozen pyramid-low-scale release (general->core handoff)."
+
+parameters:
+  target_max_edge: 1024     # longest edge of the output PNG
+  mode: auto                # max | mean | auto (max if >4 channels)
+  release_version: "1"      # the version core pins to

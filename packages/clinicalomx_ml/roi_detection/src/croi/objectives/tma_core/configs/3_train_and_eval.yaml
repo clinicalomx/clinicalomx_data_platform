@@ -1,0 +1,68 @@
+# Run this stage with: python -m croi tma_core train
+#
+# One flow, two steps (train_model -> evaluate_model) over the core splits.
+# data_dir is the TRANSIENT experiment area under the storage root
+# (<storage_root>/ml_experiments): base_models/, runs/, _dataset/, models/,
+# artifacts/. Only the governed outputs below are registered to lamindb.
+data_dir: ml_experiments
+
+inputs:
+  train_split: {kind: collection, key: clinical-roi/core/splits/train}
+  val_split:   {kind: collection, key: clinical-roi/core/splits/val}
+  test_split:  {kind: collection, key: clinical-roi/core/splits/test}
+  categories:  {kind: artifact,   key: core_labels/notes.json}
+
+outputs:
+  model:
+    key: models/core/best.pt                          # stable key; lamindb cuts versions
+    description: "YOLO champion for core (full_core / partial_core) detection"
+  metrics:
+    key: "eval/core/v{version}/{view}/metrics.json"   # {version}=champion ver, {view}=test|all
+    description: "Eval metrics (recall + IoU) for the core champion"
+  contact_sheet:
+    key: "eval/core/v{version}/{view}/worst_predictions.png"
+    description: "Worst-prediction contact sheet for the core champion"
+
+parameters:
+  # name keys the run dir (ml_experiments/runs/<name>) AND the MLflow run label.
+  # To run a second experiment (e.g. yolo26m) change BOTH `name` and
+  # `ultralytics_model_name` so the two runs don't share a run dir / resume into
+  # each other. Both register as versions of models/core/best.pt; eval + promote
+  # pick the winner.
+  name: yolo26x_roi_core
+  ultralytics_model_name: yolo26x.pt   # base checkpoint saved in base_models/, registered
+  mlflow_experiment_name: clinical-roi/core-train
+
+  resume: auto
+  mlflow_log_period: 25
+
+  train:
+    epochs: 200
+    imgsz: 640
+    batch: 16
+    patience: 30
+    workers: 4
+    seed: 42
+    save_period: -1
+    device: 0       # uncomment + set on HPC GPU nodes
+
+    # Histology-conservative augmentation (cores are densely packed; keep mosaic
+    # on most of training so the model sees varied neighbourhoods, off at the end).
+    hsv_h: 0.0
+    hsv_s: 0.0
+    hsv_v: 0.2
+    degrees: 5.0
+    translate: 0.1
+    scale: 0.3
+    fliplr: 0.5
+    flipud: 0.5
+    mosaic: 1.0
+    close_mosaic: 10
+
+  eval:
+    mlflow_experiment: clinical-roi/core-eval
+    split: test
+    co_occurrence: false
+    imgsz: 640
+    conf: 0.25
+    worst_n: 24

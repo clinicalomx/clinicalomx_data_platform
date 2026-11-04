@@ -1,0 +1,209 @@
+# Operations surface: one Caddy reverse proxy giving every hub web surface a single
+# loopback entry point, reached through one SSH tunnel (make tunnel). See docs/architecture/decisions/0004
+# and docs/runbooks/operations-ui.md.
+#
+# The proxy fronts a health endpoint and two host units over unix sockets, and the logging and
+# metrics stack of ADR 0006: Loki for log storage, Prometheus for series, Alloy collecting both,
+# cAdvisor for per-container cost, and Grafana as the one query and alerting surface.
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: clinicalomxdb_caddy
+    restart: unless-stopped
+    # Loopback only, deliberately. The security group opens port 22 alone, so publishing
+    # on 0.0.0.0 would not make this reachable from the operator and would expose an
+    # unauthenticated portal to everything sharing the HPC's NAT. The port is read from
+    # .env so staging can differ; the container side stays 8080 (see the Caddyfile).
+    ports:
+      - "127.0.0.1:${OPS_PORTAL_PORT:-8080}:8080"
+      # The HPC-facing API ports, moved here from their containers so this proxy is in the
+      # path. Published on all interfaces deliberately: the security group is what limits them
+      # to the HPC's NAT and the compute subnet, exactly as before. Caddy is now a dependency of
+      # HPC reach-back, so restarting it briefly interrupts job reporting.
+      - "4200:4200"
+      - "5000:5000"
+    volumes:
+      # DIRECTORY mounts, not file mounts, for every config below. A single-file bind mount
+      # pins the file's inode, and git replaces a file by writing a new one and renaming it
+      # over the old. The container therefore keeps reading the ORIGINAL file forever, while
+      # the host shows the new one. A reload then re-reads the stale file and reports success.
+      # That cost several hours across three separate symptoms before it was identified.
+      - ./caddy:/etc/caddy:ro
+      - ./site:/srv/site:ro
+      # The health endpoint's unix socket, served by the ops-health host unit (health/).
+      # NOT read-only: connecting to a unix socket needs write permission on its inode.
+      # The directory is mounted rather than the socket itself, so restarting ops-health
+      # (which recreates the socket) does not leave this pointing at a deleted inode.
+      - /run/ops-health:/run/ops-health
+      # The HPC login terminal's socket, served by the ops-ttyd host unit (ttyd/). One
+      # instance serves every account. Same reasoning and the same not-read-only caveat as above.
+      - /run/ops-ttyd:/run/ops-ttyd
+      # The login relay's socket, served by the ops-login host unit (login/). Same caveats.
+      - /run/ops-login:/run/ops-login
+      # The schema review renderer's socket, served by the ops-schema-review host unit
+      # (schema-review/). Same caveats.
+      - /run/ops-schema-review:/run/ops-schema-review
+    # No data volume: auto_https is off, so Caddy issues and stores no certificates and
+    # has nothing to persist across restarts.
+    networks:
+      - clinicalomxdb_net
+
+  # --- unified logging (docs/architecture/decisions/0006) ----------------------------------------------------
+  # Loki stores, Alloy collects, Grafana reads. None of the three is published: Grafana is
+  # reached at /grafana/ through the portal, and the other two are only ever talked to over
+  # clinicalomxdb_net.
+  loki:
+    image: grafana/loki:3
+    container_name: clinicalomxdb_loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/loki.yaml
+    volumes:
+      # Directory, not file: see the note on the caddy service.
+      - ./loki:/etc/loki:ro
+      - loki_data:/loki
+    networks:
+      - clinicalomxdb_net
+
+  alloy:
+    image: grafana/alloy:v1.18.0
+    container_name: clinicalomxdb_alloy
+    restart: unless-stopped
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    # Root, because reading the host journal needs access to files owned by the
+    # systemd-journal group. Every mount it gets is read-only except its own state.
+    user: root
+    volumes:
+      # Directory, not file: see the note on the caddy service.
+      - ./alloy:/etc/alloy:ro
+      # The journal. Both paths: persistent on Ubuntu, volatile if /var/log/journal is absent.
+      - /var/log/journal:/var/log/journal:ro
+      - /run/log/journal:/run/log/journal:ro
+      # sd-journal refuses to read a journal whose machine-id it cannot resolve.
+      - /etc/machine-id:/etc/machine-id:ro
+      # Container logs, read through the Docker API. This is the same socket exposure the
+      # removed log viewer had: it moved here rather than being eliminated, which is why
+      # dropping that viewer was not a security improvement (ADR 0006 Decision 3).
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - alloy_data:/var/lib/alloy/data
+    depends_on:
+      - loki
+    networks:
+      - clinicalomxdb_net
+
+  # Per-container CPU and memory. A dedicated cAdvisor rather than Alloy's embedded exporter,
+  # for a specific reason: this host's Docker data-root is /mnt/docker (ADR 0001 Decision 4), not
+  # the default, and the embedded exporter has no way to be told that. cAdvisor does, and the
+  # simplest form of telling it is to mount the real root where it expects to find it.
+  #
+  # It also keeps the broad host access here rather than on Alloy: cAdvisor reads cgroups and the
+  # container runtime's state, which is most of the host, and confining that to the component
+  # that needs it leaves the log collector with just a socket and the journal.
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: clinicalomxdb_cadvisor
+    restart: unless-stopped
+    command:
+      # Only containers, not every systemd slice on the box. Cuts the series count sharply.
+      - --docker_only=true
+      - --housekeeping_interval=30s
+      - --store_container_labels=false
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      # The host's REAL data-root, mounted at the path cAdvisor looks in.
+      - ${OPS_DOCKER_ROOT:-/var/lib/docker}:/var/lib/docker:ro
+      # Without this, cAdvisor cannot resolve the overlayfs storage driver and fails on every
+      # container scope with "cannot unix dial containerd api service".
+      - /run/containerd:/run/containerd:ro
+    networks:
+      - clinicalomxdb_net
+
+  # Metrics store. Scrapes nothing itself: Alloy pushes container and host metrics in over
+  # remote-write, so there is one collector on this host rather than two (docs/architecture/decisions/0006).
+  prometheus:
+    image: prom/prometheus:v3.4.1
+    container_name: clinicalomxdb_prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      # Metrics are cheaper per day than logs, but this still needs a bound or the volume that
+      # also holds the Postgres backups fills silently.
+      - --storage.tsdb.retention.time=30d
+      # Required for Alloy to push: without it the remote-write endpoint returns 404.
+      - --web.enable-remote-write-receiver
+      - --web.enable-lifecycle
+    volumes:
+      # Directory, not file: see the note on the caddy service.
+      - ./prometheus:/etc/prometheus:ro
+      - prometheus_data:/prometheus
+    networks:
+      - clinicalomxdb_net
+
+  grafana:
+    image: grafana/grafana:12.0.2
+    container_name: clinicalomxdb_grafana
+    restart: unless-stopped
+    environment:
+      # Served under a subpath on the portal, so it must know its own base or every asset and
+      # redirect it emits points at the wrong place.
+      GF_SERVER_ROOT_URL: ${OPS_PORTAL_URL:-http://localhost:8080}/grafana/
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      # Grafana keeps its own admin login. ADR 0007 Decision 3 puts it in the Admin tier, which
+      # Decision 4 serves from the LOOPBACK listener, and that listener has no auth proxy in
+      # front of it, so no edge identity ever reaches Grafana. Decision 6 records the choice
+      # that follows as open: keep this password, or drop it and trust the listener. Until it
+      # is taken this is the only thing between the portal and Grafana's own settings.
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      # Grafana defaults to X-Frame-Options: deny, which is stricter than MLflow's and
+      # pgAdmin's SAMEORIGIN and blocks the portal tab outright. Enabling embedding removes the
+      # header entirely, so Caddy re-imposes frame-ancestors 'self' on this route to get the
+      # same-origin behaviour back rather than leaving it framable by anyone.
+      GF_SECURITY_ALLOW_EMBEDDING: "true"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - loki
+      - prometheus
+    networks:
+      - clinicalomxdb_net
+
+volumes:
+  # On the snapshotted artifacts volume, not the 50 GB docker-root scratch that Docker itself
+  # lives on. Retention is enforced by Loki's compactor (see loki/loki.yaml).
+  loki_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${OPS_LOKI_DIR:-/mnt/data/artifacts/loki}
+  # Dashboards and alert rules are state worth keeping across a rebuild.
+  grafana_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${OPS_GRAFANA_DIR:-/mnt/data/artifacts/grafana}
+  prometheus_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${OPS_PROMETHEUS_DIR:-/mnt/data/artifacts/prometheus}
+  # Positions and WAL only: regenerable, so it stays on the scratch volume.
+  alloy_data:
+
+networks:
+  clinicalomxdb_net:
+    external: true

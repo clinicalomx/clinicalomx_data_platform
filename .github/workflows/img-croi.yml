@@ -1,0 +1,123 @@
+# Builds images for training and inference of the croi 
+# package (clinical image ROI detecition). 
+name: img-croi
+
+on:
+  push:
+    tags: ["clinical-roi-v*"]
+  workflow_dispatch:
+    inputs:
+      ref: { description: "image tag to build (also the SIF path segment)", default: "main" }
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Free disk space (CUDA images are large)
+        uses: jlumbroso/free-disk-space@main
+        with: { tool-cache: true, large-packages: true, docker-images: false }
+
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # build.sh builds the clinicalomx wheel with uv.
+      - uses: astral-sh/setup-uv@v5
+
+      # Apptainer, for the OCI -> SIF conversion.
+      - name: Install apptainer
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          url=$(gh api repos/apptainer/apptainer/releases/latest \
+            --jq '.assets[] | select(.name | test("^apptainer_[0-9][^-]*_amd64\\.deb$")) | .browser_download_url' | head -1)
+          test -n "$url"
+          curl -fsSL -o /tmp/apptainer.deb "$url"
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends /tmp/apptainer.deb
+          sudo apptainer --version
+
+      - name: Log in to GHCR
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare the SIF scratch and prove the disk assumption
+        env:
+          SIF_FREE_GB: "35"
+        run: |
+          set -euo pipefail
+          sudo mkdir -p /mnt/sif /mnt/apptainer-tmp
+          sudo chown -R "$USER" /mnt/sif /mnt/apptainer-tmp
+          df -h / /mnt
+          root_fs=$(df -P / | awk 'NR==2 {print $1}')
+          mnt_fs=$(df -P /mnt | awk 'NR==2 {print $1}')
+          if [ "$root_fs" = "$mnt_fs" ]; then
+            echo "::notice::/mnt is the SAME filesystem as / ($root_fs): docker and apptainer share one disk"
+          else
+            echo "::notice::/mnt is a separate filesystem ($mnt_fs)"
+          fi
+          avail=$(df -Pk /mnt | awk 'NR==2 {printf "%d", $4/1048576}')
+          echo "scratch free: ${avail}GB, floor ${SIF_FREE_GB}GB"
+          [ "$avail" -ge "$SIF_FREE_GB" ] || {
+            echo "::error::/mnt has ${avail}GB free and one croi SIF conversion needs ${SIF_FREE_GB}GB." \
+                 "Failing here rather than 30 minutes into the first conversion. Either the runner" \
+                 "image shrank or the disk-freeing step above reclaimed less than it used to."
+            df -h
+            exit 1
+          }
+
+      # The tag's version segment, ie so a clinical-roi-v0.1.10 tag produces v0.1.10 images.
+      - id: imagetag
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "push" ]; then
+            ref="${GITHUB_REF_NAME#clinical-roi-}"
+          else
+            ref="${{ inputs.ref }}"
+          fi
+          [ -n "$ref" ] || { echo "::error::empty image tag"; exit 1; }
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "croi images and SIFs will be tagged $ref"
+
+      - name: Build + push the 4 objective x mode images, then convert all 4 to SIFs
+        env:
+          REGISTRY: ghcr.io/${{ github.repository_owner }}
+          OWNER: ${{ github.repository_owner }}
+          REF: ${{ steps.imagetag.outputs.ref }}
+          PUSH: "1"
+          APPTAINER: "1"
+          SIF_PUSH: "1"
+          SIF_MODES: "inference train"
+          APPTAINER_CMD: "sudo -E apptainer"
+          SIF_DIR: /mnt/sif
+          APPTAINER_TMPDIR: /mnt/apptainer-tmp
+          APPTAINER_DISABLE_CACHE: "true"
+          SIF_FREE_GB: "35"
+          # apptainer push reads the same docker credentials
+          APPTAINER_DOCKER_USERNAME: ${{ github.actor }}
+          APPTAINER_DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          ENV_MANIFEST_DIR: ${{ runner.temp }}/env-manifests
+          SOURCE_REF: ${{ github.ref_type == 'tag' && github.ref_name || format('{0}@{1}', github.ref_name, github.sha) }}
+        run: bash packages/clinicalomx_ml/roi_detection/containers/build.sh
+
+      - name: Summarise the environment manifests
+        run: |
+          set -euo pipefail
+          for m in "$RUNNER_TEMP"/env-manifests/*.json; do
+            { echo "### $(basename "$m")"; echo '```json'; cat "$m"; echo '```'; } \
+              >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: env-manifests-croi-${{ steps.imagetag.outputs.ref }}
+          path: ${{ runner.temp }}/env-manifests/
+          if-no-files-found: error

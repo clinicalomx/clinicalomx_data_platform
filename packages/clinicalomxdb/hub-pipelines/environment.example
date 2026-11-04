@@ -1,0 +1,57 @@
+# hub-pipelines environment - the SCHEMA for hub-pipelines/.env.
+#
+# The file is named environment.example rather than .env.example. Every hub stack follows the
+# same convention; see hub-ops/environment.example for why the name changed.
+#
+# WHERE THE REAL VALUES LIVE FOR A REBUILD: Barbican.
+#   ../../infra/control_plane/secrets.tf reads the LOCAL hub-pipelines/.env at plan time and stores it
+#   as the <instance>-pipelines-env secret. cloud-init fetches that payload back to
+#   /opt/clinicalomxdb/hub-pipelines/.env on every boot of a fresh instance.
+#   To rotate a value: change it in the local .env, then tofu apply in ../../infra/control_plane, then
+#   re-fetch on the VM. Editing the file on the VM alone is lost on the next rebuild.
+#
+# Consumed by the mlflow, prefect and review-app services. Every key below is either read
+# through env_file or interpolated by hub-pipelines/docker-compose.yml.
+# `make pipelines-env-check` fails if the real .env is missing any key here.
+#
+# Both services reach Postgres over clinicalomxdb_net via the alias clinicalomxdb_postgres.
+# See docs/architecture/decisions/0001.
+
+# --- secrets (never commit a real value) -------------------------------------
+# SECRET: each service's own database password, clinicalomxdb/hub-pipelines/mlflow/db-password
+# and clinicalomxdb/hub-pipelines/prefect/db-password in the secrets catalog. Two roles by
+# design: each service connects as its own least-privilege role, never as the cluster root
+# (operator-verified live behaviour, D-2 2026-08-28). No stored connection URL:
+# docker-compose.yml assembles each service's URL from the parts below at the point of use
+# (mlflow --backend-store-uri, prefect PREFECT_API_DATABASE_CONNECTION_URL), so rotating a
+# password means editing that service's one key rather than hunting through URLs. Each value
+# must be URL-safe or percent-encoded, because it is interpolated into a URL.
+MLFLOW_DB_PASSWORD=CHANGEME
+PREFECT_DB_PASSWORD=CHANGEME
+
+# --- database parts (non-secret) ----------------------------------------------
+# The role each server connects as, and the host and port both reach Postgres on.
+# Both services reach the cluster over clinicalomxdb_net via the alias clinicalomxdb_postgres.
+MLFLOW_DB_USER=mlflow
+PREFECT_DB_USER=prefect
+POSTGRES_HOST=clinicalomxdb_postgres
+POSTGRES_PORT=5432
+
+# CONFIG: each server's own database in the VM's Postgres cluster.
+MLFLOW_DB_NAME=mlflow
+PREFECT_DB_NAME=prefect
+
+# --- config (non-secret) -----------------------------------------------------
+# Browser-facing URLs (ops portal, docs/architecture/decisions/0004). Both are consumed only by BROWSERS reaching
+# the portal through the operator SSH tunnel, so they are loopback addresses on the operator's
+# machine, not VM addresses. Nothing server-side, and no HPC job, resolves either:
+# MLFLOW_TRACKING_URI and PREFECT_EXTERNAL_API_URL remain the in-network and external addresses
+# respectively, and both are set in the compose file rather than here.
+
+# CONFIG: the portal's own origin. Prefect builds PREFECT_SERVER_UI_API_URL from it.
+# Keep the port in step with OPS_PORTAL_PORT in hub-ops/.env.
+OPS_PORTAL_URL=http://localhost:8080
+
+# CONFIG: MLflow deep-links built by the review app. Resolves only in a tunnelled browser, which
+# is the intent; it previously pointed at EXTERNAL_IP:5000, unreachable from the operator.
+MLFLOW_UI_URL=http://localhost:8080/mlflow

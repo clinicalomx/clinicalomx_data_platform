@@ -1,0 +1,23 @@
+# IMAGING CHANNELS: how a marker was measured, and what follows from that.
+#
+# The column contract is declared in ../seed_spec.py, not here, and seed_data/README.md is
+# generated from it. A renamed or missing column fails on read.
+#
+# segmentation_role is a fact about the channel, not the analyte. The same marker measured as
+# a blood proteomic readout has no segmentation role at all.
+#
+# These are the CURRENT curated values, which is what the query layer reads. Their provenance
+# lives in claims, one per assertion, once the ETL has run. compartment stays here because
+# rules.csv tests against it: localisation is a veto, not a vote.
+#
+# status: active | draft   (draft rows are validated on every run but never seeded)
+canonical_name,platform,segmentation_role,compartment,go_cc,uniprot_cc_raw,uniprot_release,role_source,status
+DAPI,PCF,nucleus,nucleus,,,,human,draft
+E-CADHERIN,PCF,cyto_structural,cell membrane|cell junction,,"Cell junction, adherens junction. Cell membrane",2026_03,uniprot,draft
+NAKATPASE,PCF,cyto_structural,cell membrane,,Cell membrane; Multi-pass membrane protein. Basolateral cell membrane,2026_03,uniprot,draft
+VIMENTIN,PCF,cyto_structural,cytoplasm|cytoskeleton,,"Cytoplasm. Cytoplasm, cytoskeleton. Nucleus matrix. Cell membrane",2026_03,uniprot,draft
+CITRATE_SYNTHASE,PCF,marker,mitochondrion,GO:0005759,Mitochondrion matrix,2026_03,uniprot,draft
+LDHA,PCF,marker,cytoplasm,,Cytoplasm,2026_03,uniprot,draft
+FOXP3,PCF,marker,nucleus|cytoplasm,,Nucleus. Cytoplasm,2026_03,uniprot,draft
+CD8A,PCF,marker,cell membrane,,Cell membrane; Single-pass type I membrane protein,2026_03,uniprot,draft
+BLANK,PCF,exclude,,,,,human,draft

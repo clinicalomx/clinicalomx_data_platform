@@ -1,0 +1,67 @@
+# Publish clinicalomx to the private index on its release tag. 
+# tag namespace is <distribution>-v<version>.
+name: release-clinicalomx
+
+on:
+  push:
+    tags: ["clinicalomx-v*"]
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: packages/clinicalomx
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    # None of these are secret. The endpoint is a public hostname, the bucket name leaks nothing
+    # the index does not already advertise, and the region is a Ceph zonegroup literal that RGW
+    # signs against. Only the credential is a secret.
+    env:
+      INDEX_BUCKET: ${{ vars.INDEX_BUCKET }}
+      UV_S3_ENDPOINT_URL: ${{ vars.UV_S3_ENDPOINT_URL }}
+      AWS_REGION: us-east-1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      # Artifact filenames come from pyproject's version, not from the tag, and the
+      # store has no versioning: a mismatch would publish files nobody can map back
+      # to the tag, unrecoverably, so fail before building.
+      #
+      # BOTH copies, as release-clinicalomx-markers.yml and release-clinicalomx-ledger.yml
+      # already do. This package declares its version twice, and the dunder is the copy an
+      # installed environment can be asked for: an operator verifies a rebuilt image by
+      # printing `clinicalomx.__version__` inside it. A tag checked against pyproject alone
+      # would publish a wheel that misreports itself to exactly that check.
+      - name: Tag matches both declared versions
+        run: |
+          tagged="${GITHUB_REF_NAME#clinicalomx-v}"
+          declared="$(uv version --short --color never)"
+          dunder="$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' src/clinicalomx/__init__.py)"
+          fail=0
+          if [ "$declared" != "$tagged" ]; then
+            echo "pyproject.toml declares $declared, tag says $tagged" >&2
+            fail=1
+          fi
+          if [ "$dunder" != "$tagged" ]; then
+            echo "__init__.py declares '$dunder', tag says $tagged" >&2
+            fail=1
+          fi
+          exit "$fail"
+
+      - name: Build the sdist and the wheel
+        run: uv build
+
+      - name: Publish to the private index
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.INDEX_PUBLISH_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.INDEX_PUBLISH_SECRET_ACCESS_KEY }}
+        run: uv run --with boto3 python scripts/publish_index.py dist/*

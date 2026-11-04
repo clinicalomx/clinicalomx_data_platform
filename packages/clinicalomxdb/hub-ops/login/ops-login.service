@@ -1,0 +1,43 @@
+[Unit]
+Description=HPC login relay for the operator portal (/login/)
+After=network-online.target
+Wants=network-online.target
+# Drives real ssh on a pty and relays its keyboard-interactive prompts as JSON, so the portal can
+# render them as form widgets instead of an embedded terminal. See docs/architecture/decisions/0005, which supersedes
+# ADR 0004 Decision 6, and the module docstring for the credential-handling rules.
+#
+# A HOST unit for the same reason the terminal was: the ssh process it starts BECOMES the
+# ControlMaster the Prefect workers reuse, so it must share their home directory and namespace and
+# must outlive any container restart.
+#
+# This is the one component that handles credentials, so it is deliberately a SEPARATE process
+# from the read-only health endpoint rather than a route added to it. Different risk, different
+# unit, different socket.
+
+[Service]
+Type=simple
+User=@RUN_USER@
+Group=@RUN_USER@
+# HOME decides where the ControlMaster sockets land, so it must be the worker account.
+Environment=HOME=@RUN_HOME@
+Environment=PYTHONUNBUFFERED=1
+Environment=LOGIN_HPC_HOST=@HPC_LOGIN_HOST@
+ExecStart=/usr/bin/python3 @LOGIN_DIR@/login_server.py
+
+RuntimeDirectory=ops-login
+RuntimeDirectoryMode=0755
+# Preserve=yes: without it systemd removes the directory on stop and Caddy's bind mount would
+# point at a deleted inode, silently breaking logins until Caddy restarted too.
+RuntimeDirectoryPreserve=yes
+Restart=always
+RestartSec=5
+
+# Mild, for the same reason as the health unit: ssh CONNECTS to a ControlMaster socket under
+# $HOME, and connecting needs write permission on that inode, so /home stays writable.
+ProtectSystem=full
+ProtectHome=no
+PrivateTmp=yes
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

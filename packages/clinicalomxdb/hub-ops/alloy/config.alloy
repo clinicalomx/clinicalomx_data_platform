@@ -1,0 +1,135 @@
+// Grafana Alloy: the log collector. Two sources, one destination.
+//
+// Alloy rather than promtail, which is the collector most documentation still describes.
+// Verified against grafana/alloy v1.18.0 that both components below exist.
+//
+// Deliberately NOT Loki's Docker logging driver, which is the other obvious way to ship
+// container logs. That driver replaces each container's logging driver, which breaks
+// `docker logs` for every container on the host. Reading the Docker API leaves that intact.
+
+logging {
+  level  = "warn"
+  format = "logfmt"
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://clinicalomxdb_loki:3100/loki/api/v1/push"
+  }
+}
+
+// --- host systemd units -------------------------------------------------------------------
+// The gap the container log viewer never covered, and the reason it was replaced: the workers,
+// the ops units, the backup timer and sshd all log here and nowhere else. Reading it from a
+// container needs the journal directory and /etc/machine-id mounted, and the container must run
+// as a user that may read them.
+
+discovery.relabel "journal" {
+  targets = []
+
+  // The unit name is the label everything is queried by, so it is promoted out of the
+  // journal's __journal__ namespace, which is dropped otherwise.
+  rule {
+    source_labels = ["__journal__systemd_unit"]
+    target_label  = "unit"
+  }
+  // systemd's own lifecycle messages ("Scheduled restart job", "Failed with result") come from
+  // PID 1, so _SYSTEMD_UNIT on them is init.scope and the unit they are ABOUT is in the separate
+  // UNIT field. Without this, a crash-looping worker's restart messages are filed under
+  // init.scope and cannot be counted per unit, which is exactly what the flapping alert needs.
+  //
+  // regex "(.+)" is load-bearing: a relabel rule whose source label is empty and whose regex
+  // matches empty would blank the target, wiping `unit` on every ordinary log line. Requiring at
+  // least one character makes the rule a no-op unless UNIT is actually set.
+  rule {
+    source_labels = ["__journal_unit"]
+    regex         = "(.+)"
+    target_label  = "unit"
+  }
+  rule {
+    source_labels = ["__journal__hostname"]
+    target_label  = "host"
+  }
+  rule {
+    source_labels = ["__journal_priority_keyword"]
+    target_label  = "level"
+  }
+}
+
+loki.source.journal "host" {
+  forward_to    = [loki.write.default.receiver]
+  relabel_rules = discovery.relabel.journal.rules
+  labels        = { job = "journal" }
+  // On a restart, replay a bounded window rather than the whole journal. Anything older is
+  // already in Loki, and re-pushing it would be rejected by reject_old_samples anyway.
+  max_age = "12h"
+  path    = "/var/log/journal"
+}
+
+// --- containers ---------------------------------------------------------------------------
+
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+
+  // Default is 60s, which leaves a long window in which a container that has exited is still a
+  // target. The tailer then tries to inspect it and logs "No such container". Harmless but
+  // noisy, and this stack runs short-lived containers routinely: `compose run --rm` for the
+  // lamin connect on boot and for every schema command. A shorter interval narrows the window
+  // without dropping anything, since a container that lived less than one interval had almost
+  // no logs to collect anyway.
+  refresh_interval = "15s"
+}
+
+discovery.relabel "containers" {
+  targets = discovery.docker.containers.targets
+
+  // Docker reports names with a leading slash; strip it so the label reads clinicalomxdb_mlflow
+  // rather than /clinicalomxdb_mlflow.
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/?(.*)"
+    target_label  = "container"
+  }
+  rule {
+    source_labels = ["__meta_docker_container_log_stream"]
+    target_label  = "stream"
+  }
+}
+
+loki.source.docker "containers" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.containers.output
+  labels     = { job = "docker" }
+  forward_to = [loki.write.default.receiver]
+}
+
+// --- container and host metrics -------------------------------------------------------------
+// CPU and memory come from here rather than a separate cAdvisor container: this agent already
+// holds the Docker socket, so exporting container metrics is a config block rather than another
+// image to run and update.
+
+// Container metrics come from the dedicated cAdvisor container, scraped over HTTP, NOT from
+// Alloy's embedded exporter. That exporter cannot be pointed at a non-default Docker data-root,
+// and this host uses /mnt/docker. Scraping keeps Alloy's own mounts down to a socket and the
+// journal instead of the whole host filesystem.
+prometheus.scrape "containers" {
+  targets         = [{"__address__" = "clinicalomxdb_cadvisor:8080", "job" = "cadvisor"}]
+  forward_to      = [prometheus.remote_write.default.receiver]
+  scrape_interval = "30s"
+}
+
+// Host-level CPU, memory, disk and load, so a container problem can be told apart from the box
+// being under pressure as a whole.
+prometheus.exporter.unix "host" { }
+
+prometheus.scrape "host" {
+  targets         = prometheus.exporter.unix.host.targets
+  forward_to      = [prometheus.remote_write.default.receiver]
+  scrape_interval = "30s"
+}
+
+prometheus.remote_write "default" {
+  endpoint {
+    url = "http://clinicalomxdb_prometheus:9090/api/v1/write"
+  }
+}

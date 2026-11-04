@@ -1,0 +1,32 @@
+[Unit]
+Description=Prefect process worker (pipeline-pool, VM pipeline orchestration tier)
+After=docker.service network-online.target
+Wants=network-online.target
+# Runs parent pipeline-orchestration flows (e.g. qptiff-pipeline-v1) as plain
+# processes on the VM. They call run_deployment against the HPC leaves and query
+# lamindb; they hold no SLURM allocation, so blocking on children is safe. This
+# venv must have lamindb installed + connected for the collect-TMAs step.
+#
+# This file is a TEMPLATE. bootstrap.sh substitutes @PREFECT_DIR@ / @RUN_USER@ /
+# @RUN_HOME@ and installs the result to /etc/systemd/system, so it runs wherever
+# the repo is checked out. Do not enable this file directly; run bootstrap.sh.
+
+[Service]
+Type=simple
+User=@RUN_USER@
+Group=@RUN_USER@
+Environment=HOME=@RUN_HOME@
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=@PREFECT_DIR@/worker.env
+WorkingDirectory=@PREFECT_DIR@
+ExecStart=@PREFECT_DIR@/.venv/bin/prefect worker start --pool pipeline-pool --type process
+Restart=always
+RestartSec=5
+# A stop is not a failure. Prefect's worker turns the SIGTERM systemd sends into a
+# KeyboardInterrupt and exits 130, which systemd otherwise records as `failed`, so a
+# clean drain left the unit red and a real fault looked the same as a planned stop.
+# Restart=always is unaffected: it ignores the exit status either way.
+SuccessExitStatus=130
+
+[Install]
+WantedBy=multi-user.target

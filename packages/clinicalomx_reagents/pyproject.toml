@@ -1,0 +1,32 @@
+[project]
+name = "clinicalomx_reagents"
+version = "0.1.0"
+description = "The lab's reagent inventory for the clinicalOMx instance: conjugated antibodies, reporter barcodes and dyes, with the checks that make importing one safe."
+readme = "README.md"
+# Copyright 2026 ClinicalOMXLab
+license = "Apache-2.0"
+requires-python = ">=3.11"
+# None, on purpose: this package is claim-free wet-lab validation, read by lab staff, and it
+# must stay importable on the vocabulary chain that `clinicalomx_markers` keeps free of
+# lamindb, bionty, django and psycopg2.
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/clinicalomx_reagents"]
+
+[dependency-groups]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "C4", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

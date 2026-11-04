@@ -1,0 +1,272 @@
+# First-boot provisioning of the hub VM onto the MONOREPO RELEASE MODEL.
+write_files:
+  - path: /etc/docker/daemon.json
+    permissions: '0644'
+    content: |
+      {
+        "data-root": "/mnt/docker"
+      }
+  - path: /etc/systemd/system/docker.service.d/mount.conf
+    permissions: '0644'
+    content: |
+      [Unit]
+      RequiresMountsFor=/mnt/docker
+
+  - path: /home/ubuntu/.ssh/config
+    permissions: '0600'
+    content: |
+      Host hpc hpc-${hpc_user}
+          HostName ${hpc_login_host}
+          User ${hpc_user}
+          ControlMaster auto
+          ControlPath ~/.ssh/cm-%r@%h:%p
+          ControlPersist 96h
+          ServerAliveInterval 60
+          ServerAliveCountMax 3
+
+  - path: /etc/ssh/sshd_config.d/10-clinicalomxdb-gatewayports.conf
+    permissions: '0644'
+    content: |
+      # Managed by cloud-init (infra/control_plane/cloud_init.yaml.tftpl). See the comment there.
+      GatewayPorts clientspecified
+
+  - path: /opt/clinicalomx_data_platform/config/package-env/site.yaml
+    permissions: '0600'
+    encoding: b64
+    content: ${base64encode(site_yaml)}
+
+%{ if length(ssh_public_keys) > 0 ~}
+ssh_authorized_keys:
+%{ for key in ssh_public_keys ~}
+  - ${key}
+%{ endfor ~}
+%{ endif ~}
+
+apt:
+  sources:
+    deadsnakes:
+      source: "ppa:deadsnakes/ppa"
+
+packages:
+  - git
+  - python3-venv
+  - python3-pip
+  - python3.11
+  - python3.11-venv
+  - python3.11-dev
+
+runcmd:
+  - |
+    if sshd -t; then
+      systemctl reload ssh
+      echo "clinicalomxdb - sshd reloaded" >> /var/log/clinicalomxdb-sshd.log
+    else
+      echo "clinicalomxdb - sshd config INVALID, NOT reloaded" >> /var/log/clinicalomxdb-sshd.log
+    fi
+  - |
+    if sshd -T | grep -qi '^gatewayports clientspecified'; then
+      echo "clinicalomxdb - GatewayPorts clientspecified is in effect" >> /var/log/clinicalomxdb-sshd.log
+    else
+      echo "clinicalomxdb - WARNING GatewayPorts is NOT in effect; check that sshd_config includes sshd_config.d" >> /var/log/clinicalomxdb-sshd.log
+    fi
+
+  - chown -R ubuntu:ubuntu /home/ubuntu/.ssh
+  - chmod 700 /home/ubuntu/.ssh
+
+  - grep -q ' postgres$' /etc/hosts || echo "127.0.0.1 postgres clinicalomxdb_postgres" >> /etc/hosts
+
+  # Volume and Docker data-root setup
+  - systemctl stop docker || true
+  - mkdir -p /mnt/data/postgres /mnt/data/artifacts /mnt/docker
+  # wait for the attached Cinder volumes to appear (attach races cloud-init..)
+  - |
+    for dev in ${device_postgres} ${device_artifacts} ${device_docker}; do
+      echo "waiting for $dev ..."
+      for i in $(seq 1 60); do [ -e "$dev" ] && break; sleep 2; done
+    done
+  # fstab: 'nofail' so the VM boots if a volume is detached
+  - grep -q " /mnt/data/postgres " /etc/fstab || echo "${device_postgres} /mnt/data/postgres auto defaults,nofail 0 2" >> /etc/fstab
+  - grep -q " /mnt/data/artifacts " /etc/fstab || echo "${device_artifacts} /mnt/data/artifacts auto defaults,nofail 0 2" >> /etc/fstab
+  - grep -q " /mnt/docker " /etc/fstab || echo "${device_docker} /mnt/docker auto defaults,nofail 0 2" >> /etc/fstab
+  - mount -a
+
+  # postgres ssl certs
+  - mkdir -p /opt/certificates
+  - openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes -keyout /opt/certificates/server.key -out /opt/certificates/server.crt -subj "/CN=clinicalomxdb_postgres"
+  - chown 999:999 /opt/certificates/server.key /opt/certificates/server.crt
+  - chmod 600 /opt/certificates/server.key
+
+  - systemctl daemon-reload
+  - systemctl enable --now docker
+  - usermod -aG docker ubuntu
+
+  # releases
+  - mkdir -p /opt/clinicalomx_data_platform/config/package-env
+  - chown -R ubuntu:ubuntu /opt/clinicalomx_data_platform
+  - chmod 700 /opt/clinicalomx_data_platform/config/package-env
+
+  - |
+    TAG="${platform_release_tag}"
+    ROOT=/opt/clinicalomx_data_platform
+    CFG=$ROOT/config/package-env
+
+    TOKEN=$(curl -s -X POST "${os_auth_url}auth/tokens" \
+      -H "Content-Type: application/json" \
+      -d '{"auth":{"identity":{"methods":["application_credential"],"application_credential":{"id":"${barbican_app_cred_id}","secret":"${barbican_app_cred_secret}"}}}}' \
+      -D - -o /dev/null | awk 'tolower($1)=="x-subject-token:"{print $2}' | tr -d "\r")
+    umask 077
+    curl -s -H "X-Auth-Token: $TOKEN" -H "Accept: text/plain" "${db_env_secret_ref}/payload"        > "$CFG/hub-database.env"
+    curl -s -H "X-Auth-Token: $TOKEN" -H "Accept: text/plain" "${pipelines_env_secret_ref}/payload" > "$CFG/hub-pipelines.env"
+  
+    curl -s -H "X-Auth-Token: $TOKEN" -H "Accept: text/plain" "${ops_env_secret_ref}/payload"       > "$CFG/hub-ops.env"
+    chmod 600 "$CFG/hub-database.env" "$CFG/hub-pipelines.env" "$CFG/hub-ops.env"
+    chown ubuntu:ubuntu "$CFG/hub-database.env" "$CFG/hub-pipelines.env" "$CFG/hub-ops.env"
+
+    PACKAGES_PAT=$(curl -s -H "X-Auth-Token: $TOKEN" -H "Accept: text/plain" "${ghcr_packages_pat_secret_ref}/payload")
+    CONTENTS_PAT=$(curl -s -H "X-Auth-Token: $TOKEN" -H "Accept: text/plain" "${github_contents_pat_secret_ref}/payload")
+    printf '%s' "$PACKAGES_PAT" | docker login ghcr.io -u ${ghcr_username} --password-stdin
+    unset PACKAGES_PAT
+    
+    printf '\nDB_DATA_DIR=/mnt/data/postgres\nLAMIN_HOME=/home/ubuntu/.lamin\nDB_CERT_DIR=/opt/certificates\nLAMIN_DB_HOST_OVERRIDE=postgres\n' >> "$CFG/hub-database.env"
+
+    BOOTSTRAP=$ROOT/.bootstrap
+    if [ ! -d "$ROOT/releases/$TAG" ]; then
+      rm -rf "$BOOTSTRAP"
+      sudo -u ubuntu mkdir -p "$BOOTSTRAP"
+      sudo -u ubuntu env \
+        GIT_CONFIG_COUNT=1 \
+        GIT_CONFIG_KEY_0="url.https://${ghcr_username}:$CONTENTS_PAT@github.com/.insteadOf" \
+        GIT_CONFIG_VALUE_0="https://github.com/" \
+        git clone --branch "$TAG" --depth 1 \
+          https://github.com/${source_repository}.git "$BOOTSTRAP/src"
+      sudo -u ubuntu env \
+        GIT_CONFIG_COUNT=1 \
+        GIT_CONFIG_KEY_0="url.https://${ghcr_username}:$CONTENTS_PAT@github.com/.insteadOf" \
+        GIT_CONFIG_VALUE_0="https://github.com/" \
+        CLINICALOMX_SITE_REPOSITORY="${source_repository}" \
+        bash "$BOOTSTRAP/src/scripts/release/assemble-release.sh" "$TAG" "$ROOT"
+      rm -rf "$BOOTSTRAP"
+    fi
+    unset CONTENTS_PAT
+
+    if [ ! -d "$ROOT/releases/$TAG/infra/systemd" ]; then
+      MSG="clinicalomx FATAL: release $TAG did not assemble under $ROOT/releases. Nothing below this point in cloud-init can work. Check the contents-read token scope on the platform repo, and that the tag exists on the remote."
+      echo "$MSG" >> /var/log/clinicalomx-provision.log
+      echo "$MSG" >> /etc/motd
+      echo "$MSG" >&2
+      exit 1
+    fi
+
+    sudo -u ubuntu ln -sfn "releases/$TAG" "$ROOT/current"
+    echo "clinicalomx - current -> $(readlink "$ROOT/current")"
+
+    sudo -u ubuntu python3 -m venv "$ROOT/shared/site-venv"
+    sudo -u ubuntu "$ROOT/shared/site-venv/bin/pip" install --quiet "pydantic>=2" "pyyaml>=6"
+    sudo -u ubuntu "$ROOT/shared/site-venv/bin/python" "$ROOT/current/scripts/site/render.py"
+
+  # mlflow artifact binds
+  - mkdir -p /mnt/data/artifacts/mlflow /mnt/data/artifacts/prefect /mnt/data/artifacts/backups
+
+  # host lamin
+  - mkdir -p /home/ubuntu/.lamin
+  - chown ubuntu:ubuntu /home/ubuntu/.lamin
+
+  # prefect vm pool worker home
+  - mkdir -p /opt/clinicalomx_data_platform/shared/runtime/worker-home
+  - chown -R ubuntu:ubuntu /opt/clinicalomx_data_platform/shared
+
+  # systemd services
+  - install -m 644 /opt/clinicalomx_data_platform/current/infra/systemd/clinicalomxdb.service   /etc/systemd/system/clinicalomxdb.service
+  - install -m 644 /opt/clinicalomx_data_platform/current/infra/systemd/pg-backup.service       /etc/systemd/system/pg-backup.service
+  - install -m 644 /opt/clinicalomx_data_platform/current/infra/systemd/pg-backup.timer         /etc/systemd/system/pg-backup.timer
+  - install -m 644 /opt/clinicalomx_data_platform/current/infra/systemd/pg-backup-alert.service /etc/systemd/system/pg-backup-alert.service
+  - install -m 755 /opt/clinicalomx_data_platform/current/infra/systemd/lamin-connect.sh        /usr/local/bin/lamin-connect.sh
+
+  # deploy stack
+  - docker network create clinicalomxdb_net || true
+  - systemctl daemon-reload
+  - systemctl enable --now clinicalomxdb.service
+
+  # prefect hpc worker
+  - bash /opt/clinicalomx_data_platform/current/packages/clinicalomxdb/hub-pipelines/prefect/workers/hpc/bootstrap.sh
+
+  # hpc socket broker per user (potentiall deprecate)
+  - bash /opt/clinicalomx_data_platform/current/packages/clinicalomxdb/hub-pipelines/prefect/workers/hpc/bootstrap-users.sh
+  - bash /opt/clinicalomx_data_platform/current/packages/clinicalomxdb/hub-ops/ttyd/bootstrap.sh
+
+  # health checker endpoint
+  - bash /opt/clinicalomx_data_platform/current/packages/clinicalomxdb/hub-ops/health/bootstrap.sh
+
+  # schema review app (potentially deprecate)
+  - bash /opt/clinicalomx_data_platform/current/packages/clinicalomxdb/hub-ops/schema-review/bootstrap.sh
+
+  # daily postgres backup timer
+  - systemctl enable --now pg-backup.timer
+
+  # prefect vmpool worker instance
+  - |
+    R=/opt/clinicalomx_data_platform/current
+    PREFECT_API_URL=http://localhost:4200/api \
+      PIPELINE_DIR="$R/packages/clinicalomx_pipelines" \
+      bash "$R/packages/clinicalomxdb/hub-pipelines/prefect/workers/vm-process/bootstrap.sh"
+
+  # replace bootstrapped workers to current paths
+  - install -m 644 /opt/clinicalomx_data_platform/current/infra/systemd/vm-pool-worker.service         /etc/systemd/system/vm-pool-worker.service
+  - install -m 644 /opt/clinicalomx_data_platform/current/infra/systemd/pipeline-pool-worker.service   /etc/systemd/system/pipeline-pool-worker.service
+  - install -m 644 /opt/clinicalomx_data_platform/current/infra/systemd/hpc-ssh-pool-worker.service  /etc/systemd/system/hpc-ssh-pool-worker.service
+  - install -m 644 /opt/clinicalomx_data_platform/current/infra/systemd/hpc-ssh-pool-worker@.service /etc/systemd/system/hpc-ssh-pool-worker@.service
+  - systemctl daemon-reload
+  - systemctl restart vm-pool-worker.service pipeline-pool-worker.service hpc-ssh-pool-worker.service
+  # per-user instances, if users.conf named any (potentially deprecate)
+  - systemctl restart 'hpc-ssh-pool-worker@*.service' || true
+
+  # denote MANUAL post-boot steps, appended to motd on login
+  - |
+    NOTE=/var/log/clinicalomx-provision-manual-steps.txt
+    cat > "$NOTE" <<'EOF'
+    ===============================================================================
+    clinicalomx hub: this VM was provisioned onto the monorepo release model.
+    THREE steps remain and NONE of them can be done at boot. Until they are done,
+    what is listed here does not work.
+    ===============================================================================
+
+    1. DUO auth, once, as ubuntu (never sudo):
+
+           ssh hpc echo ok
+
+       This establishes the DUO-authenticated ControlMaster socket the hpc workers
+       piggyback for sbatch. ControlPersist is 96h. The workers already run and poll;
+       only HPC SUBMISSION waits on this. Repeat per user alias (ssh hpc-USER).
+
+    2. Seed the worker Lamin login. Directory:
+
+           /opt/clinicalomx_data_platform/shared/runtime/worker-home
+
+       vm-pool-worker.service and pipeline-pool-worker.service run with HOME set there,
+       and the Lamin settings directory follows HOME, so both workers read
+       worker-home/.lamin rather than /home/ubuntu/.lamin. Boot created the directory
+       EMPTY. On the migrated box this directory was copied forward from the old
+       checkout; a rebuilt box has nothing to copy from, and
+       the repository does not record how it was first created, so nothing is invented
+       here. Until it holds a connected instance, any vm-pool or pipeline-pool flow that
+       calls lamindb fails, and the failure reads like a bad credential.
+
+       The obvious candidate is /home/ubuntu/.lamin, which the boot-time lamin connect
+       has already populated. Whether that is the right seed for a cache the workers
+       hold SEPARATELY, on purpose, is your call, and it is exactly why boot does not
+       copy it for you.
+
+    3. Cinder volume snapshot timer: still manual, it needs OpenStack credentials on
+       the VM, kept off the box until then (ADR 0001).
+
+    Everything else is automated: the release at
+    /opt/clinicalomx_data_platform/releases/<tag>/ with `current` pointing at it, the
+    three stack env files from Barbican in config/package-env/, the hub stack unit and
+    the backup units from the release's infra/systemd/, lamin connect into
+    /home/ubuntu/.lamin, all four Prefect worker units, and the four ops-* portal units.
+    EOF
+    sed -i 's/^    //' "$NOTE"
+    chmod 644 "$NOTE"
+    printf '\n' >> /etc/motd
+    cat "$NOTE" >> /etc/motd
+    cat "$NOTE"

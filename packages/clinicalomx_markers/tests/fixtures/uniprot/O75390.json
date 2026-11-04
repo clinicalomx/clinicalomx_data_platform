@@ -1,0 +1,277 @@
+{
+  "headers": {
+    "content-type": "application/json",
+    "x-uniprot-release": "2026_02",
+    "x-uniprot-release-date": "10-June-2026"
+  },
+  "body": {
+    "entryType": "UniProtKB reviewed (Swiss-Prot)",
+    "primaryAccession": "O75390",
+    "proteinDescription": {
+      "recommendedName": {
+        "fullName": {
+          "value": "Citrate synthase, mitochondrial"
+        },
+        "ecNumbers": [
+          {
+            "evidences": [
+              {
+                "evidenceCode": "ECO:0000269",
+                "source": "PubMed",
+                "id": "31141475"
+              }
+            ],
+            "value": "2.3.3.1"
+          }
+        ]
+      },
+      "alternativeNames": [
+        {
+          "fullName": {
+            "value": "Citrate (Si)-synthase"
+          }
+        }
+      ],
+      "flag": "Precursor"
+    },
+    "genes": [
+      {
+        "geneName": {
+          "value": "CS"
+        }
+      }
+    ],
+    "comments": [
+      {
+        "texts": [
+          {
+            "evidences": [
+              {
+                "evidenceCode": "ECO:0000305"
+              }
+            ],
+            "value": "Key enzyme of the Krebs tricarboxylic acid cycle which catalyzes the synthesis of citrate from acetyl coenzyme A and oxaloacetate"
+          }
+        ],
+        "commentType": "FUNCTION"
+      },
+      {
+        "commentType": "SUBCELLULAR LOCATION",
+        "subcellularLocations": [
+          {
+            "location": {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000250",
+                  "source": "UniProtKB",
+                  "id": "P00889"
+                }
+              ],
+              "value": "Mitochondrion matrix",
+              "id": "SL-0170"
+            }
+          }
+        ]
+      }
+    ],
+    "uniProtKBCrossReferences": [
+      {
+        "database": "GO",
+        "id": "GO:0070062",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:extracellular exosome"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "HDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0007005",
+            "source": "PubMed",
+            "id": "20458337"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005759",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:mitochondrial matrix"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "9543345"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005739",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:mitochondrion"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:HPA"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005634",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:nucleus"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "HDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0007005",
+            "source": "PubMed",
+            "id": "21630459"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0036440",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:citrate synthase activity"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "31141475"
+          },
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "9543345"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0042802",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:identical protein binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IPI:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000353",
+            "source": "PubMed",
+            "id": "31141475"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0003723",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:RNA binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "HDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0007005",
+            "source": "PubMed",
+            "id": "22681889"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005975",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:carbohydrate metabolic process"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "9543345"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0006101",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:citrate metabolic process"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:InterPro"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0006099",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:tricarboxylic acid cycle"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IBA:GO_Central"
+          }
+        ]
+      }
+    ],
+    "extraAttributes": {
+      "uniParcId": "UPI00000700D6"
+    }
+  }
+}

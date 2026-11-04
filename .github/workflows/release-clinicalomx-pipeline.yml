@@ -1,0 +1,48 @@
+# Publish clinicalomx-pipeline to the private index on its release tag. 
+# the tag namespace is <distribution>-v<version>.
+name: release-clinicalomx-pipeline
+
+on:
+  push:
+    tags: ["clinicalomx-pipeline-v*"]
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: packages/clinicalomx_pipelines
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    env:
+      INDEX_BUCKET: ${{ vars.INDEX_BUCKET }}
+      UV_S3_ENDPOINT_URL: ${{ vars.UV_S3_ENDPOINT_URL }}
+      AWS_REGION: us-east-1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Tag matches the declared version
+        run: |
+          declared="$(uv version --short --color never)"
+          tagged="${GITHUB_REF_NAME#clinicalomx-pipeline-v}"
+          if [ "$declared" != "$tagged" ]; then
+            echo "tag $GITHUB_REF_NAME does not match pyproject version $declared" >&2
+            exit 1
+          fi
+
+      - name: Build the sdist and the wheel
+        run: uv build
+
+      - name: Publish to the private index
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.INDEX_PUBLISH_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.INDEX_PUBLISH_SECRET_ACCESS_KEY }}
+        run: uv run --no-project --with boto3 python ../clinicalomx/scripts/publish_index.py dist/*

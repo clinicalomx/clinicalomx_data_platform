@@ -1,0 +1,36 @@
+# Run this stage with: python -m croi tissue_objects extract-tma-crops
+#
+# Detect TMA grids on the thumbnail PNGs with the served model, crop each TMA
+# region out of the PNG, and bundle into a FROZEN general->core crop release
+# (versioned in lockstep with the model). Detection runs INLINE here, with no
+# separate detections artifact / predict step.
+#
+# inputs   = the governed Collections/model CONSUMED.
+# outputs  = the per-crop Artifacts + the frozen release Collection PRODUCED.
+inputs:
+  thumbnails: {kind: collection, key: clinical-roi/thumbnails}   # the PNGs to detect + crop
+  # The model to run, resolved via ModelRef (lamindb anchor, MLflow twin surfaced).
+  #   lamindb: {alias: production} | {uid: <uid>} | {key: models/general/best.pt}
+  #   mlflow : {mlflow_version: 3} | {mlflow_alias: production} | {mlflow_run_id: <id>}
+  model: {alias: production}
+
+outputs:
+  crops:
+    key_prefix: shared/tma_crops    # per crop: shared/tma_crops/<thumb_stem>/tma_<i>.png (in-place)
+    key_template: "shared/tma_crops/{slide}/tma_{i}.png"   # per-artifact key (materialize output)
+    description: "TMA thumbnail crop (general->core handoff)."
+  release:
+    key: clinical-roi/shared/tma_crops   # the frozen crop-release Collection
+    description: "Frozen TMA crop release, versioned in lockstep with the producing model."
+
+parameters:
+  target_class: TMA
+  conf: 0.25          # detection confidence threshold passed to model.predict
+  min_conf: 0.75      # keep only TMA detections at/above this for cropping
+  imgsz: 640
+  # Crop-release version. Leave null -> AUTO from the model's lamindb version
+  # (models/general/best.pt vX -> crops vX). Set a string only to override.
+  release_version: null
+  # Optional inference-backend block (framework / tta / multi-scale / ensemble). See
+  # croi.detection.backends.detector_for. Empty -> single ultralytics YOLO at `imgsz`.
+  backend: {}

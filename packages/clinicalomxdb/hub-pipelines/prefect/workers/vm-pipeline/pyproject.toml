@@ -1,0 +1,31 @@
+[project]
+name = "vm-pipeline-worker"
+version = "0.1.0"
+description = "Prefect process worker for the pipeline-pool (VM orchestration tier). Runs parent pipeline-orchestration flows that call run_deployment against the HPC leaves and query lamindb; they hold no SLURM allocation."
+# Copyright 2026 ClinicalOMXLab
+license = "Apache-2.0"
+requires-python = ">=3.10"
+dependencies = [
+    "prefect==3.6.27",
+    # lamindb is PINNED EXACTLY and must match every other environment that touches the
+    # clinicalOMx instance (clinicalomx-pipeline, clinicalomx, the croi inference wheels, the
+    # workers, the bgnorm image). Two reasons a floor is not enough:
+    #  - a package BEHIND the instance's DB schema (2.8.1) refuses to connect;
+    #  - 2.8.x changed how Artifact.suffix is derived (CanonicalSuffix is MIME-based), so `.qptiff`
+    #    records as "" where older versions wrote ".qptiff". Mixed versions left the instance
+    #    holding both spellings and silently broke every filter(suffix=...) query.
+    # Bump the instance and ALL pins together, then rebuild the SIFs and images.
+    "lamindb==2.8.1",
+]
+
+# This service currently runs from the shared parent venv at hub-pipelines/prefect/.venv
+# (see pipeline-pool-worker.service), not a dedicated vm-pipeline/.venv. This file versions
+# and declares what the pipeline-pool worker requires; point it at its own venv if it is
+# ever split out. The worker is started as:
+#   prefect worker start --pool pipeline-pool --type process
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = []

@@ -1,0 +1,246 @@
+# The lamindb image build, shared by the interactive container and the Explore service so the
+# two can never drift onto different vocabulary versions. An explicit image tag rather than a
+# compose-generated one, so both services resolve to the same build without building it twice.
+#
+# The build installs the first-party packages from wheels `make db-build` writes to dist/, so it
+# takes no credential and no version argument: the checkout is the version.
+x-lamindb-build: &lamindb-build
+  context: .
+  dockerfile: Dockerfile.lamindb
+
+services:
+  database:
+    image: postgres:18
+    container_name: postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    env_file:
+      - .env
+    volumes:
+      # The TLS pair Postgres serves with, per host like the two paths below. The VM names
+      # /opt/certificates, written by cloud-init one level above the repo; a dev box takes the
+      # repo-local default and `make db-up` generates a self-signed pair into it. Mounted as
+      # single FILES rather than a directory because the target is the container's own
+      # /etc/ssl, and mounting a directory there would hide its CA store.
+      #
+      # create_host_path false, as below. Docker would otherwise create a DIRECTORY named
+      # server.crt for a pair that is not there yet, and Postgres reports that as
+      # "could not load server certificate file: no start line", which reads as a corrupt
+      # certificate rather than a missing one.
+      - type: bind
+        source: ${DB_CERT_DIR:?set DB_CERT_DIR in hub-database/.env; see environment.example}/server.crt
+        target: /etc/ssl/certs/server.crt
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${DB_CERT_DIR:?set DB_CERT_DIR in hub-database/.env; see environment.example}/server.key
+        target: /etc/ssl/private/server.key
+        read_only: true
+        bind:
+          create_host_path: false
+      # WHERE THE CLUSTER LIVES, per host. On the VM this is /mnt/data/postgres, the mounted
+      # data disk; on a dev box it is the repo-local default in environment.example, which
+      # `make db-dirs` creates on the way to db-up, so a fresh clone needs no sudo mkdir. A
+      # relative value is resolved against this file's directory, not the caller's CWD.
+      #
+      # No compose-level default, and create_host_path false, both ON PURPOSE. A default would
+      # be silently wrong on the one host where being wrong costs the most: a VM whose .env
+      # lacks the key would come up on a directory beside the repo, initialise an empty cluster
+      # and look healthy while the real one sits unreachable. create_host_path false makes an
+      # ABSENT or MISTYPED path a refusal to start rather than an empty directory conjured in
+      # its place, which is what the bind-backed named volume this replaced already did.
+      #
+      # What neither covers, stated so nobody reads a guarantee here that is not one: the VM's
+      # data disk failing to mount. cloud_init.yaml.tftpl mkdir -p's /mnt/data/postgres BEFORE
+      # mount -a, because an fstab mount needs its mountpoint to exist, so this path is present
+      # whether or not the Cinder volume attached and the bind succeeds onto the root disk.
+      # create_host_path only refuses a path that is absent, which this one never is. The guard
+      # for that case is RequiresMountsFor in clinicalomxdb.service, which restart:
+      # unless-stopped bypasses when dockerd starts containers on its own. Separate work.
+      #
+      # `make db-up` creates the directory first, so a dev box still needs no mkdir.
+      - type: bind
+        source: ${DB_DATA_DIR:?set DB_DATA_DIR in hub-database/.env; see environment.example}
+        target: /var/lib/postgresql
+        bind:
+          create_host_path: false
+    # Connection hygiene. Remote clients (HPC flow runs reaching the instance, plus the
+    # long-lived VM services) can leave server-side connections behind when a job ends
+    # uncleanly (walltime kill, OOM, scancel, or a dropped link): the process never closes
+    # its socket, so the connection lingers as idle. With no reaper those accumulate until
+    # max_connections is exhausted and non-superuser roles are refused. The settings below
+    # reap them. idle_session_timeout closes a session left idle for ten minutes, which
+    # covers finished or abandoned jobs. The tcp_keepalives values make the server probe a
+    # peer after sixty seconds idle and declare it dead after about two minutes, instead of
+    # the roughly two hour operating-system default, so a killed job's dead connection is
+    # detected and closed quickly. These mirror the runtime ALTER SYSTEM values already
+    # applied on the live instance; command-line settings take precedence, so a fresh deploy
+    # starts with them in force. Clients reconnect transparently.
+    #
+    # Connection logging is on so that who connects, from where, and every failed attempt is
+    # visible in the aggregated logs (docs/architecture/decisions/0006). 5432 is reachable from the facility's
+    # SHARED translation host, so this is the only record of who is trying.
+    command: >
+      postgres
+      -c ssl=on
+      -c ssl_cert_file=/etc/ssl/certs/server.crt
+      -c ssl_key_file=/etc/ssl/private/server.key
+      -c idle_session_timeout=10min
+      -c log_connections=on
+      -c log_disconnections=on
+      -c tcp_keepalives_idle=60
+      -c tcp_keepalives_interval=10
+      -c tcp_keepalives_count=6
+    networks:
+      default:
+      clinicalomxdb_net:
+        aliases:
+          - clinicalomxdb_postgres
+
+  pgadmin:
+    image: dpage/pgadmin4:9.13
+    container_name: pgadmin
+    restart: unless-stopped
+    # Loopback only: nothing off this host needs pgAdmin, unlike Postgres (LaminHub),
+    # MLflow and Prefect (HPC reach-back). Reach it at /pgadmin/ through the operator
+    # tunnel (docs/architecture/decisions/0004).
+    ports:
+      - "127.0.0.1:5050:80"
+    env_file:
+      - .env
+    environment:
+      # Serve under a subpath so the ops portal can route to it. Without this pgAdmin
+      # emits root-relative asset and login URLs and the proxied page cannot load.
+      SCRIPT_NAME: /pgadmin
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    # On the shared network so Caddy (a separate compose project) can resolve it. Without
+    # this pgAdmin sits on the db project's default network alone and is unroutable from
+    # the portal. Alias mirrors the clinicalomxdb_postgres convention above.
+    networks:
+      default:
+      clinicalomxdb_net:
+        aliases:
+          - clinicalomxdb_pgadmin
+    depends_on:
+      - database
+
+  # The Explore tab (docs/runbooks/operations-ui.md), served at /explore/ on the portal.
+  #
+  # It exists because this instance is a lakehouse: entities are ln.Record rows discriminated by
+  # a type record and their attributes are feature values in link tables, so a question like
+  # "artifacts whose cell_type is T cell" is one call in the Python API and a multi-table join
+  # in SQL. pgAdmin is the wrong shape for that question; this is the right one, and pgAdmin
+  # stays for the times raw SQL is genuinely what is wanted.
+  #
+  # Same image as python-lamindb, so the vocabulary and the pinned lamindb are already present.
+  # The app code is a BIND MOUNT, so changing it costs a container restart rather than an image
+  # rebuild, which matters because a rebuild needs the private-repo credential.
+  explorer:
+    image: clinicalomxdb-lamindb:local
+    build: *lamindb-build
+    container_name: clinicalomxdb_explorer
+    restart: unless-stopped
+    command: ["python", "/explorer/explorer_server.py"]
+    environment:
+      EXPLORER_PORT: "8600"
+      # Set to off to serve only the no-eval query builder. The console evaluates Python in this
+      # container and is not sandboxed; ADR 0007 makes it admin-only, and until that lands
+      # reaching the portal already implies ssh access to this host.
+      EXPLORER_CONSOLE: ${EXPLORER_CONSOLE:-on}
+    volumes:
+      - ./explorer:/explorer:ro
+      # Host ~/.lamin, exactly as the review app mounts it: lamindb reads the connected instance
+      # from here, so there is no per-container login. Per host, like DB_DATA_DIR above: the VM
+      # names /home/ubuntu/.lamin and a dev box defaults to ~/.clinicalomxdb/lamin, where the tab
+      # serves with no instance connected until a connect writes one and this service is restarted,
+      # because lamindb resolves the instance once at import and caches it. Off the VM no connect
+      # makes this tab query: lamin-connect writes the hub instance, whose database is registered at
+      # an address a dev box cannot route to, and lamin-local writes one at @localhost:5432, which
+      # this service cannot reach from clinicalomxdb_net (docs/runbooks/operations-ui.md).
+      # create_host_path false for the same reason as the cluster above: a path that does not
+      # exist is a typo or an unwritten ~/.lamin, and an empty directory conjured in its place
+      # reads as an instance that is merely not connected. `make db-up` creates it.
+      - type: bind
+        source: ${LAMIN_HOME:?set LAMIN_HOME in hub-database/.env; see environment.example}
+        target: /root/.lamin
+        bind:
+          create_host_path: false
+    # A name for the VM host itself, so the Agent tab can reach a model served somewhere that is
+    # not a container: a locally-run vLLM reverse-tunnelled onto the host, most likely. The
+    # container's own 127.0.0.1 is its own namespace and never the host's, which is the single
+    # most common way this is got wrong.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # No published port: reachable only through Caddy, which is itself loopback-only.
+    networks:
+      - clinicalomxdb_net
+    depends_on:
+      - database
+
+  python-lamindb:
+    container_name: python-lamindb
+    image: clinicalomxdb-lamindb:local
+    build: *lamindb-build
+    stdin_open: true
+    tty: true
+    command: /bin/bash
+    network_mode: "service:database"
+    env_file:
+      - .env
+    # The site values clinicalomx's declared storage roots name (vocab storages.yaml), from
+    # site.env through make or clinicalomxdb.service. Empty when absent rather than an error here,
+    # because only the schema verbs read them, and each refuses an empty one by name.
+    environment:
+      CLINICALOMX_SITE_RAW_ROOT: ${CLINICALOMX_SITE_RAW_ROOT:-}
+      CLINICALOMX_SITE_RAW_SCRATCH_ROOT: ${CLINICALOMX_SITE_RAW_SCRATCH_ROOT:-}
+      CLINICALOMX_SITE_HPC_ROOT: ${CLINICALOMX_SITE_HPC_ROOT:-}
+    volumes:
+      - .:/workspace
+      # Host ~/.lamin, the same bind the explorer service takes, for a reason that is not
+      # cosmetic: WHICH INSTANCE IS CONNECTED IS PER-CONTAINER STATE. lamindb_setup keeps it in
+      # $HOME/.lamin/current_instance.env, so without this bind `make lamin-connect` (which
+      # execs the long-lived container) writes into that container's own writable layer and
+      # `make schema-plan`/`schema-review` (which each start a NEW one with `run --rm`) find an
+      # empty settings directory and report no instance connected. The two commands the runbook
+      # names in sequence could not see each other's work.
+      #
+      # Binding it makes the settings directory host state, which is what it already is on the
+      # VM: cloud-init runs the same lamin_connect.sh in a container and every service reads the
+      # host ~/.lamin it wrote. This gives a dev box the same arrangement rather than a second
+      # one. LAMIN_HOME therefore now reaches these verbs from .env instead of only from the
+      # make command line; passing it on the command line still works, because make exports a
+      # command-line variable and compose prefers the environment over --env-file.
+      #
+      # create_host_path false, as everywhere else here: an absent path is a typo or an
+      # unwritten ~/.lamin, and an empty directory conjured in its place reads as an instance
+      # that is merely not connected. `make db-up` creates it.
+      - type: bind
+        source: ${LAMIN_HOME:?set LAMIN_HOME in hub-database/.env; see environment.example}
+        target: /root/.lamin
+        bind:
+          create_host_path: false
+      - ../hub-storage/rdm/:/QRISdata
+      # WARNING: this mounts an HPC-SHAPED path on a host that is not the HPC. A storage
+      # root registered in the instance as /scratch/... therefore *exists* in this
+      # container, and lamindb will select it as local storage while the instance believes
+      # it is shared HPC scratch. See ADR 0003; do not register a /scratch root from here.
+      - ../hub-storage/hpc_scratch/:/scratch
+    working_dir: /workspace
+    depends_on:
+      - database
+
+volumes:
+  # postgres_data is gone: it was a named volume whose only job was to bind one hardcoded host
+  # path, /mnt/data/postgres, which exists on the VM and nowhere else. A named volume cannot
+  # create its bind device, so every other host failed at first up with "no such file or
+  # directory". The database service now binds the path directly from DB_DATA_DIR, which
+  # `make db-dirs` creates; the bind itself still refuses to, for the reason argued at that
+  # mount. The VM keeps the same device, so no data moves.
+  pgadmin_data:
+
+networks:
+  clinicalomxdb_net:
+    external: true

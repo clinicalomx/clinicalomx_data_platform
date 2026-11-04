@@ -1,0 +1,148 @@
+{
+  "generated_at": "2026-08-05T10:00:00+00:00",
+  "cache_seconds": 15,
+  "status": "fail",
+  "checks": {
+    "connections": {
+      "status": "ok",
+      "summary": "1/1 session(s) live, 1 submit-ready",
+      "detail": [
+        {
+          "user": "alice",
+          "source": "provisioned",
+          "alias": "hpc-alice",
+          "socket": "/home/ubuntu/.ssh/cm-alice@hpc-login.example.edu:22",
+          "pool": "hpc-ssh-pool-alice",
+          "unit": "hpc-ssh-pool-worker@alice.service",
+          "socket_present": true,
+          "master_alive": true,
+          "pool_present": true,
+          "pool_status": "READY",
+          "worker_installed": true,
+          "worker_active": true,
+          "submit_ready": true,
+          "status": "ok",
+          "established_age_hours": 3.2,
+          "control_persist_idle_timeout_hours": 96
+        }
+      ]
+    },
+    "prefect": {
+      "status": "ok",
+      "summary": "Prefect up, 3/3 work pools ready",
+      "detail": [
+        {
+          "name": "hpc-ssh-pool",
+          "type": "hpc-slurm-ssh-pusher",
+          "pool_status": "READY",
+          "paused": false,
+          "status": "ok"
+        },
+        {
+          "name": "hpc-ssh-pool-alice",
+          "type": "hpc-slurm-ssh-pusher",
+          "pool_status": "READY",
+          "paused": false,
+          "status": "ok"
+        },
+        {
+          "name": "pipeline-pool",
+          "type": "process",
+          "pool_status": "READY",
+          "paused": false,
+          "status": "ok"
+        }
+      ]
+    },
+    "pg_backup": {
+      "status": "fail",
+      "summary": "last pg-backup FAILED (sentinel present)",
+      "detail": {
+        "dir": "/mnt/data/artifacts/backups/postgres",
+        "sentinel": "2026-08-05T02:30:11Z pg-backup FAILED on clinicalomxhub"
+      }
+    },
+    "lamin": {
+      "status": "ok",
+      "summary": "example-org/clinicalomx",
+      "detail": {
+        "owner": "example-org",
+        "name": "clinicalomx",
+        "schema": "bionty",
+        "id": "299ebc2df56f45f3a331793ff6c1c479"
+      }
+    },
+    "systemd_units": {
+      "status": "ok",
+      "summary": "6/6 units active",
+      "detail": [
+        {
+          "unit": "hpc-ssh-pool-worker.service",
+          "load_state": "loaded",
+          "active_state": "active",
+          "sub_state": "running",
+          "restarts": 0,
+          "active_for_seconds": 98000,
+          "restarts_in_window": 0,
+          "window_seconds": 900,
+          "status": "ok"
+        },
+        {
+          "unit": "pipeline-pool-worker.service",
+          "load_state": "loaded",
+          "active_state": "active",
+          "sub_state": "running",
+          "restarts": 0,
+          "active_for_seconds": 98000,
+          "restarts_in_window": 0,
+          "window_seconds": 900,
+          "status": "ok"
+        },
+        {
+          "unit": "vm-pool-worker.service",
+          "load_state": "loaded",
+          "active_state": "active",
+          "sub_state": "running",
+          "restarts": 0,
+          "active_for_seconds": 98000,
+          "restarts_in_window": 0,
+          "window_seconds": 900,
+          "status": "ok"
+        },
+        {
+          "unit": "ops-login.service",
+          "load_state": "loaded",
+          "active_state": "active",
+          "sub_state": "running",
+          "restarts": 0,
+          "active_for_seconds": 98000,
+          "restarts_in_window": 0,
+          "window_seconds": 900,
+          "status": "ok"
+        },
+        {
+          "unit": "ops-ttyd.service",
+          "load_state": "loaded",
+          "active_state": "active",
+          "sub_state": "running",
+          "restarts": 0,
+          "active_for_seconds": 98000,
+          "restarts_in_window": 0,
+          "window_seconds": 900,
+          "status": "ok"
+        },
+        {
+          "unit": "clinicalomxdb.service",
+          "load_state": "loaded",
+          "active_state": "active",
+          "sub_state": "running",
+          "restarts": 0,
+          "active_for_seconds": 98000,
+          "restarts_in_window": 0,
+          "window_seconds": 900,
+          "status": "ok"
+        }
+      ]
+    }
+  }
+}

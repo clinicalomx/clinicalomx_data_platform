@@ -1,0 +1,34 @@
+# Monorepo-release render of the per-user hpc worker template; provenance in
+# infra/systemd/README.md. The template at
+# packages/clinicalomxdb/hub-pipelines/prefect/workers/hpc/hpc-ssh-pool-worker@.service
+# stays authoritative; %i is the HPC username, one instance per users.conf row.
+#
+# HOME must be the account holding ~/.ssh/config and the ControlMaster sockets. Every
+# instance runs as the SAME system account; users are separated by which HPC account
+# their socket authenticates to, not by a local account each.
+[Unit]
+Description=Prefect hpc-slurm-ssh-pusher worker for %i (pool hpc-ssh-pool-%i)
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+Environment=HOME=/home/ubuntu
+Environment=PYTHONUNBUFFERED=1
+Environment=HPC_SSH_BLOCK=hpc-%i
+EnvironmentFile=/opt/clinicalomx_data_platform/current/packages/clinicalomxdb/hub-pipelines/prefect/worker.env
+EnvironmentFile=/opt/clinicalomx_data_platform/current/site.env
+WorkingDirectory=/opt/clinicalomx_data_platform/current/packages/clinicalomxdb/hub-pipelines/prefect
+ExecStart=/opt/clinicalomx_data_platform/current/packages/clinicalomxdb/hub-pipelines/prefect/.venv/bin/prefect worker start --pool hpc-ssh-pool-%i --type hpc-slurm-ssh-pusher
+Restart=always
+RestartSec=5
+# A stop is not a failure. Prefect's worker turns the SIGTERM systemd sends into a
+# KeyboardInterrupt and exits 130, which systemd otherwise records as `failed`, so a
+# clean drain left the unit red and a real fault looked the same as a planned stop.
+# Restart=always is unaffected: it ignores the exit status either way.
+SuccessExitStatus=130
+
+[Install]
+WantedBy=multi-user.target

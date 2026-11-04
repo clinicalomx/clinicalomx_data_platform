@@ -1,0 +1,21 @@
+# Applies to the STAGED build context (see build.sh). Keep the heavy/irrelevant out so the
+# base venv warmed in Tier 0 is never clobbered and the context stays small.
+**/.git
+**/.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+**/node_modules
+# Repo working dirs / governed data never belong in an image (data lives in lamindb storage).
+# NAMED PRECISELY, not `**/data`: since the re-layering BOTH objectives have a PACKAGE called
+# `data` (roi_detection/src/{general,core}/data), and a bare `**/data` silently dropped the whole
+# data layer out of the wheel the image builds.
+**/runs
+**/logs
+**/*.sif
+**/.ipynb_checkpoints
+**/notebooks
+**/.env
+**/.test.env

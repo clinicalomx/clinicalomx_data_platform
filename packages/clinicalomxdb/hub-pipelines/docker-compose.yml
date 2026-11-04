@@ -1,0 +1,151 @@
+services:
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v3.12.0-full
+    container_name: clinicalomxdb_mlflow
+    restart: unless-stopped
+    # No published port. Reached on clinicalomxdb_net by the review app and the workers, and
+    # from the HPC through the ops portal's :5000 site, which is what gives it an access log and
+    # a place to authenticate (docs/architecture/decisions/0006, docs/architecture/decisions/0007).
+    env_file:
+      - .env
+    volumes:
+      - mlflow_data:/mlflow
+    # Deliberately NO --static-prefix, even though this is served at /mlflow/ on the ops
+    # portal. Verified against this image: --static-prefix moves EVERY route, the REST API
+    # included, so /api/2.0/... would become /mlflow/api/2.0/... and every tracking client
+    # (each HPC job, the review app) would break. MLflow's UI emits purely relative asset
+    # and ajax-api paths and uses a hash router, so stripping the prefix at the proxy is
+    # sufficient and leaves this server addressable at the root for its clients.
+    # --allowed-hosts '*' is what lets the proxied Host header (localhost:8080) through.
+    command: >
+      bash -c "pip install --no-cache-dir psycopg2-binary &&
+      mlflow server
+      --backend-store-uri postgresql://${MLFLOW_DB_USER}:${MLFLOW_DB_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${MLFLOW_DB_NAME}
+      --serve-artifacts
+      --artifacts-destination /mlflow/artifacts
+      --host 0.0.0.0
+      --port 5000
+      --allowed-hosts '*'
+      --cors-allowed-origins '*'"
+    networks:
+      - clinicalomxdb_net
+
+  prefect:
+    image: prefecthq/prefect:3-latest
+    container_name: clinicalomxdb_prefect
+    restart: unless-stopped
+    command: prefect server start --host 0.0.0.0
+    # No published port, for the same reason as MLflow above. The VM's own workers reach this
+    # at localhost:4200, which is now the ops portal rather than this container directly.
+    environment:
+      PREFECT_HOME: /prefect
+      # Assembled from the .env parts so no stored URL embeds the password; the +asyncpg
+      # driver is required by the server.
+      PREFECT_API_DATABASE_CONNECTION_URL: postgresql+asyncpg://${PREFECT_DB_USER}:${PREFECT_DB_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${PREFECT_DB_NAME}
+      # Served at /prefect/ on the ops portal. SERVE_BASE moves only the UI's own mount,
+      # so the API stays at /api and the portal strips the prefix for it alone (see
+      # hub-ops/caddy/Caddyfile). UI_API_URL is BROWSER-facing, so it is the portal address, not
+      # an in-network one; it does not affect PREFECT_API_URL for workers or HPC jobs.
+      PREFECT_SERVER_UI_SERVE_BASE: /prefect
+      PREFECT_SERVER_UI_API_URL: ${OPS_PORTAL_URL:-http://localhost:8080}/prefect/api
+    env_file:
+      - .env
+    volumes:
+      - prefect_data:/prefect
+    networks:
+      - clinicalomxdb_net
+
+  # ROI review Streamlit app (HITL gate). Image built + pushed by CI in the
+  # clinicalomx_pipeline repo; pulled here (VM needs a GHCR read token). Published to
+  # 127.0.0.1 only - no auth. Reach it at /review/ on the ops portal (make tunnel); the
+  # direct 8501 forward still works for debugging the app without the portal.
+  review-app:
+    image: ${CLINICALOMX_SITE_IMAGE_REGISTRY:?render site.env with scripts/site/render.py and export it}/clinicalomx-review-app:latest
+    container_name: clinicalomxdb_review
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8501:8501"
+    environment:
+      PREFECT_API_URL: http://clinicalomxdb_prefect:4200/api
+      # MLflow: TRACKING_URI is the in-network address the app queries for experiment ids;
+      # UI_URL is the browser-facing address used to build deep-links (operator sets it in .env).
+      MLFLOW_TRACKING_URI: http://clinicalomxdb_mlflow:5000
+      MLFLOW_UI_URL: ${MLFLOW_UI_URL:-}
+      # The LaminHub slug its record links name: lamin.instance in site.yaml, via site.env.
+      LAMIN_INSTANCE: ${LAMIN_INSTANCE:-}
+      # Serve under a subpath so the ops portal can route to it. Streamlit then emits
+      # /review-prefixed asset and _stcore websocket paths, and the portal forwards the
+      # prefix intact rather than stripping it.
+      STREAMLIT_SERVER_BASE_URL_PATH: review
+    volumes:
+      # Host ~/.lamin (populated once by lamin-connect.sh) - lamindb reads the connected
+      # instance from here, so no per-container login. Mirrors Apptainer's $HOME bind on the HPC.
+      # THIS IMAGE MUST KEEP RUNNING AS ROOT to read it: make lamin-connect leaves the settings
+      # directory owner-only, 0700 with 0600 contents owned by the host user, and uid 0 is what
+      # bypasses that mode. A non-root USER in the image would silently lose the instance here.
+      - /home/ubuntu/.lamin:/root/.lamin
+    depends_on:
+      - prefect
+    networks:
+      - clinicalomxdb_net
+
+  # The Build app: clinicalomx's Extract Explorer (what any ROI can be turned into, and a plan to
+  # build it). Image built + pushed by CI (.github/workflows/img-build-app.yml in the monorepo);
+  # rolled by qptiff_pipeline/deploy_build_app.sh, which defaults to this directory. Published to
+  # 127.0.0.1 only - no auth. Reach it at /build/ on the ops portal (make tunnel).
+  #
+  # A SEPARATE SERVICE from review-app rather than a panel inside it, because it is a different
+  # thing: the review app is four human gates that write pipeline state, and this reads the whole
+  # ROI graph and writes nothing. It is a much smaller image for the same reason - no canvas, no
+  # sortables, no geometry stack.
+  build-app:
+    image: ${CLINICALOMX_SITE_IMAGE_REGISTRY:?render site.env with scripts/site/render.py and export it}/clinicalomx-build-app:latest
+    container_name: clinicalomxdb_build
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8601:8601"
+    environment:
+      # The Prefect API, in-network and by service name, exactly as review-app above. This app
+      # SUBMITS builds to the hpc-ssh-pool deployment: it reads the deployment to size a job and
+      # creates a flow run per chunk, so with no address here the client falls back to its default
+      # and every deployment read fails as if nothing were registered.
+      PREFECT_API_URL: http://clinicalomxdb_prefect:4200/api
+      # NO PREFIX VARIABLE HERE ANY MORE, and its absence is the one thing to know about this
+      # service. This app is Reflex, not Streamlit: the `/build` prefix is compiled INTO its
+      # JavaScript bundle - every asset URL and the /build/_event websocket address are literals
+      # in it - so it is set in `packages/clinicalomx_pipelines/rxconfig.py` at image build time
+      # and changing it is a rebuild. Setting `REFLEX_FRONTEND_PATH` here would move the mount
+      # without moving the bundle, giving a container that answers /build/ping and 404s every
+      # page. The portal still forwards the prefix intact rather than stripping it, exactly as
+      # for the review app one service above.
+    volumes:
+      # Host ~/.lamin, the same bind and the same root-user caveat as review-app above: the
+      # settings directory is 0700 owned by the host user, and uid 0 is what bypasses that mode.
+      # This app reads the instance for everything it shows, so without this it draws nothing.
+      - /home/ubuntu/.lamin:/root/.lamin
+    # Postgres through lamindb (the hub-database stack), and Prefect in this one: it reads the
+    # instance for what it shows and submits builds to Prefect. That comment used to say it talked
+    # to neither, which was true for one day and is exactly what stopped anyone noticing the app
+    # had no API address after it gained a deployment to submit to.
+    depends_on:
+      - prefect
+    networks:
+      - clinicalomxdb_net
+
+volumes:
+  mlflow_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/data/artifacts/mlflow
+  prefect_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/data/artifacts/prefect
+
+networks:
+  clinicalomxdb_net:
+    external: true

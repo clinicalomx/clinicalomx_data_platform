@@ -1,0 +1,221 @@
+# Operator portal. Plain HTTP: the SSH tunnel already encrypts the hop, and a self-signed
+# certificate on localhost only buys browser warnings.
+#
+# Upstreams are Docker network names on clinicalomxdb_net rather than localhost, per
+# ADR 0001, so splitting a service onto its own VM later costs a hostname change.
+#
+# Two prefix conventions are in play and the difference decides whether a route strips.
+# A service told its own base path (Prefect UI, Streamlit, pgAdmin) wants the prefix
+# forwarded intact, so it uses handle. MLflow is served unprefixed and stripped instead,
+# for the reason recorded on its service in hub-pipelines/docker-compose.yml.
+{
+	# The admin API is ENABLED, bound to the container's own loopback. It is not published and
+	# other containers have their own network namespace, so the only way to reach it is
+	# `docker exec` into this container, which already implies host access.
+	#
+	# It was off originally, when this proxy served only the loopback portal and applying a new
+	# config by restarting cost nothing. It now carries HPC submission traffic, so a restart
+	# drops in-flight job reporting. `caddy reload` re-reads the Caddyfile with no dropped
+	# connections, and that is only possible with this endpoint listening.
+	admin localhost:2019
+	auto_https off
+}
+
+:8080 {
+	log
+
+	# Prefect. PREFECT_UI_SERVE_BASE moves the UI's static mount to /prefect but leaves the
+	# API at /api, so the API route strips the prefix and the UI route does not. Caddy
+	# matches handle blocks by path specificity, so /prefect/api* wins over /prefect*
+	# regardless of the order here.
+	redir /prefect /prefect/
+	handle /prefect/api* {
+		uri strip_prefix /prefect
+		reverse_proxy clinicalomxdb_prefect:4200
+	}
+	handle /prefect* {
+		reverse_proxy clinicalomxdb_prefect:4200
+	}
+
+	# MLflow. Runs with no static prefix and is stripped here, so it stays addressable at
+	# the root for its tracking clients. This works because its index.html and bundle emit
+	# relative asset and ajax-api paths, which the browser resolves against /mlflow/, and
+	# because it uses a hash router, so deep links need no server-side route.
+	# The trailing-slash redirect is load-bearing, not cosmetic: at /mlflow the browser
+	# would resolve those relative paths against / and miss the proxy route entirely.
+	redir /mlflow /mlflow/
+	handle_path /mlflow/* {
+		reverse_proxy clinicalomxdb_mlflow:5000
+	}
+
+	# ROI review app. STREAMLIT_SERVER_BASE_URL_PATH=review, so the prefix is forwarded,
+	# including the /review/_stcore/stream websocket that reverse_proxy upgrades natively.
+	redir /review /review/
+	handle /review* {
+		reverse_proxy clinicalomxdb_review:8501
+	}
+
+	# The Build app: clinicalomx's Extract Explorer, served standalone. Same arrangement as
+	# /review/ above and for the same reason, although the app is Reflex rather than Streamlit:
+	# it is told where it is mounted, so it emits /build-prefixed asset URLs and its websocket
+	# lives at /build/_event, and the prefix is forwarded intact. Stripping it, as /explore/ below
+	# does, would 404 every one of them; that route strips because its app is told nothing about
+	# where it is mounted, and this one is.
+	#
+	# THIS BLOCK IS UNCHANGED BY THE MOVE OFF STREAMLIT. Reflex in production mode mounts the
+	# compiled frontend into its own backend, so it is still one container, one port and one
+	# websocket behind one forwarding handle - only the websocket's path changed, and it is under
+	# the same prefix.
+	redir /build /build/
+	handle /build* {
+		reverse_proxy clinicalomxdb_build:8601
+	}
+
+	# pgAdmin. SCRIPT_NAME=/pgadmin, so the prefix is forwarded. Reached by the network
+	# alias added in hub-database/docker-compose.yml, not by its bare container name.
+	redir /pgadmin /pgadmin/
+	handle /pgadmin* {
+		reverse_proxy clinicalomxdb_pgadmin:80
+	}
+
+	# The LaminDB Explore tab, served from the python-lamindb image (hub-database/explorer).
+	# The prefix is STRIPPED, like MLflow's and unlike Prefect's: the app is told nothing about
+	# where it is mounted and requests every URL relatively, so it works under any prefix. That
+	# makes the trailing-slash redirect load-bearing rather than cosmetic, because at /explore
+	# the browser would resolve those relative paths against / and miss this route entirely.
+	redir /explore /explore/
+	handle_path /explore/* {
+		reverse_proxy clinicalomxdb_explorer:8600 {
+			# The Agent tab streams its progress as server-sent events. Caddy disables
+			# buffering for text/event-stream on its own, but only once it has seen the
+			# header; -1 makes it unconditional, so a slow first event cannot sit in a
+			# buffer while the page shows nothing happening.
+			flush_interval -1
+		}
+	}
+
+	# Grafana, the query and alerting surface over Loki (docs/architecture/decisions/0006). GF_SERVER_ROOT_URL and
+	# serve_from_sub_path tell it its own base, so the prefix is forwarded intact. Grafana uses
+	# websockets for live tail, which reverse_proxy upgrades natively.
+	redir /grafana /grafana/
+	handle /grafana* {
+		# GF_SECURITY_ALLOW_EMBEDDING drops Grafana's X-Frame-Options: deny, which would
+		# otherwise block this tab, but it drops the protection entirely rather than easing it
+		# to same-origin. This puts the same-origin restriction back, which is what the other
+		# framed services enforce for themselves.
+		header Content-Security-Policy "frame-ancestors 'self'"
+		reverse_proxy clinicalomxdb_grafana:3000
+	}
+
+	# Health endpoint for the portal's status tiles, served by the ops-health HOST unit
+	# (hub-ops/health) over a unix socket. A host process cannot be reached at 127.0.0.1
+	# from inside this container, and giving it a TCP port on all interfaces would undo the
+	# loopback tightening, so the socket is bind-mounted in instead. If this 502s, the unit
+	# is down: systemctl status ops-health.
+	handle /health* {
+		reverse_proxy unix//run/ops-health/health.sock
+	}
+
+	# The schema review page, served by the ops-schema-review HOST unit (hub-ops/schema-review)
+	# over a unix socket. It renders the page on this box, where the instance is, and serves the
+	# last one it rendered; nothing re-renders on its own.
+	#
+	# A HOST unit for the same reason the health endpoint is one: it runs `make schema-review`,
+	# which drives docker compose, so it needs the checkout and the docker group rather than the
+	# docker socket handed into a container.
+	#
+	# The prefix is FORWARDED intact, like Prefect's and unlike MLflow's, because the page it
+	# serves is fetched by a wrapper that asks for `status`, `page` and `render` relative to its
+	# own URL. If this 502s, the unit is down: systemctl status ops-schema-review.
+	redir /schema-review /schema-review/
+	handle /schema-review* {
+		reverse_proxy unix//run/ops-schema-review/review.sock
+	}
+
+	# HPC login relay, served by the ops-login HOST unit (hub-ops/login) over a unix socket.
+	# It drives real ssh on a pty and returns each keyboard-interactive prompt as JSON, which the
+	# portal renders as form widgets. This is the PRIMARY login path (docs/architecture/decisions/0005).
+	#
+	# It is the one route that carries credentials, which is why it is a separate process and
+	# socket from the read-only health endpoint rather than another route on it: different risk,
+	# different unit. Only the account name and the prompt responses are client-supplied; every
+	# other ssh option is fixed in the relay.
+	handle /login/* {
+		reverse_proxy unix//run/ops-login/login.sock
+	}
+
+	# The embedded terminal, a single ops-ttyd HOST unit on a unix socket (hub-ops/ttyd), kept as
+	# the FALLBACK for when the relay mis-reads a prompt: it puts the raw ssh session in front of
+	# you with nothing interpreting it. A prompt relay is a heuristic; this is not.
+	#
+	# One terminal, not one per user: it runs hpc-login.sh, which asks which account to
+	# authenticate and passes it to ssh with -o User, so no path here names a user. The command
+	# ttyd runs is fixed and cannot be influenced from the URL, because --url-arg is not enabled;
+	# that matters because the account it runs as is in the docker group, which would make a shell
+	# here equivalent to root.
+	#
+	# --base-path /ssh, so the prefix is forwarded intact and the websocket upgrade at /ssh/ws is
+	# handled by reverse_proxy natively.
+	redir /ssh /ssh/
+	handle /ssh/* {
+		reverse_proxy unix//run/ops-ttyd/login.sock
+	}
+
+	# Everything else: the tab shell in site/.
+	handle {
+		root * /srv/site
+		file_server
+	}
+}
+
+# --- HPC-facing API endpoints ---------------------------------------------------------
+# These two ports were published directly by their containers, which meant Caddy could not see
+# them: no access log, no rate limit, and nowhere to put authentication. The HPC's NAT, the
+# hub.compute_ingress_cidr of site.yaml, is SHARED, so every HPC user could reach both
+# services unauthenticated. Moving the published port here is what makes ADR 0006's access
+# logging and ADR 0007's auth edge possible.
+#
+# Served at the ROOT of each port rather than under a path, so the addresses the HPC already uses
+# are unchanged and worker.env needs no edit.
+#
+# Each is restricted to the paths a CLIENT calls. Narrowing is free here and it takes the Prefect
+# and MLflow web interfaces, reachable from the HPC today, off the public ports entirely; both remain
+# available to the operator through the portal on 8080.
+#
+# `log` is deliberate rather than incidental: after this change these two blocks are the only place
+# traffic from the HPC is visible, so they are the source for the intrusion alerts in ADR 0006.
+#
+# Both access loggers are NAMED, which the portal's own :8080 logger is not. A named logger emits
+# "logger":"http.log.access.<name>" on every line, which is how the alert rule tells a request to
+# these ports apart from one to the portal. The alternative, matching on the Host header, is
+# client-supplied and therefore trivially wrong.
+
+:4200 {
+	log prefect_api
+
+	# Flow runs report state here, and workers subscribe to events over a websocket, which
+	# reverse_proxy upgrades natively.
+	handle /api* {
+		reverse_proxy clinicalomxdb_prefect:4200
+	}
+	# Everything else, the UI included, is not exposed off-host.
+	handle {
+		respond "not found" 404
+	}
+}
+
+:5000 {
+	log mlflow_api
+
+	# /api covers tracking and, because the server runs with --serve-artifacts, the artifact
+	# proxy at /api/2.0/mlflow-artifacts as well.
+	handle /api/* {
+		reverse_proxy clinicalomxdb_mlflow:5000
+	}
+	handle /health {
+		reverse_proxy clinicalomxdb_mlflow:5000
+	}
+	handle {
+		respond "not found" 404
+	}
+}

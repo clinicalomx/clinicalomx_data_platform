@@ -1,0 +1,124 @@
+# CI for packages/clinicalomxdb.
+name: pkg-clinicalomxdb
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/clinicalomxdb/**"
+      - ".github/workflows/pkg-clinicalomxdb.yml"
+  pull_request:
+    paths:
+      - "packages/clinicalomxdb/**"
+      - ".github/workflows/pkg-clinicalomxdb.yml"
+
+defaults:
+  run:
+    working-directory: packages/clinicalomxdb
+
+jobs:
+  explorer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Pins still match the image
+        run: |
+          for pin in "lamindb==2.8.1" "langgraph==1.2.10" "openai==2.53.0" "pyyaml"; do
+            grep -q "\"$pin\"" hub-database/Dockerfile.lamindb || {
+              echo "hub-database/Dockerfile.lamindb no longer installs $pin"
+              echo "update the pins in this workflow to match, then re-run"
+              exit 1
+            }
+          done
+
+      - name: Install the image's public pins
+        run: pip install "lamindb==2.8.1" "langgraph==1.2.10" "openai==2.53.0" "pyyaml"
+
+      - name: Explore tab and schema review tests
+        run: |
+          PYTHONPATH="$PWD/hub-database/explorer:$PWD/hub-database/review" \
+            python tests/explorer/run.py
+
+  hpc-worker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: packages/clinicalomxdb/hub-pipelines/prefect/workers/hpc
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: pip install "prefect==3.6.27" "psycopg2-binary>=2.9" "pydantic>=2" pytest importlib_metadata
+
+      - name: Tests
+        run: python -m pytest tests -q
+
+  structure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compose files render
+        # A site value no example file carries: hub-pipelines names its images under it and
+        # refuses to render without one. site.env supplies it on a real host.
+        env:
+          CLINICALOMX_SITE_IMAGE_REGISTRY: ghcr.io/example
+        run: |
+          for stack in hub-database hub-pipelines hub-ops; do
+            cp "$stack/environment.example" "$stack/.env"
+          done
+          for stack in hub-database hub-pipelines hub-ops hub-storage; do
+            echo "--- $stack"
+            docker compose -f "$stack/docker-compose.yml" config -q
+          done
+
+      # git ls-files runs inside the package directory, so paths come back
+      # package-relative. The infra/ exclusion is vacuous since Stage 1B moved
+      # the OpenTofu roots to the platform root infra/; the root roots are
+      # outside this working directory either way.
+      - name: Config files parse
+        run: |
+          pip install pyyaml
+          python - <<'PY'
+          import json, subprocess, sys, yaml
+          files = [f for f in subprocess.run(
+              ["git", "ls-files", "*.yml", "*.yaml", "*.json"],
+              capture_output=True, text=True, check=True).stdout.split()
+              if not f.startswith("infra/")]
+          bad = []
+          for f in files:
+              load = json.load if f.endswith(".json") else yaml.safe_load
+              try:
+                  with open(f) as fh:
+                      load(fh)
+              except Exception as exc:
+                  bad.append(f"{f}: {exc}")
+          print(f"parsed {len(files)} files")
+          if bad:
+              print("\n".join(bad))
+              sys.exit(1)
+          PY
+
+      - name: No .envrc is tracked
+        run: |
+          tracked=$(git ls-files '*.envrc')
+          if [ -n "$tracked" ]; then
+            echo "$tracked"
+            echo "a .envrc is tracked; it is gitignored for a reason. git rm --cached it"
+            exit 1
+          fi
+
+      - name: Makefile parses and help runs
+        run: make help > /dev/null

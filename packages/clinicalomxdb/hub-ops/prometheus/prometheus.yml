@@ -1,0 +1,10 @@
+# Prometheus as a plain remote-write sink. It scrapes nothing itself: Alloy already runs on this
+# host with a Docker socket and a view of the journal, so it exports container and host metrics
+# and pushes them here. One agent, not two.
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+# Deliberately empty. If this ever grows scrape jobs, ask first whether Alloy should collect it
+# instead, so there is one collector to reason about rather than two.
+scrape_configs: []

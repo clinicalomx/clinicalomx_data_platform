@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.coverage
+.DS_Store
+
+# The site configuration and what scripts/site/render.py writes from it. Only
+# site.example.yaml is committed; the filled-in site.yaml lives on the hub and in the lab vault.
+/site.yaml
+/site.env
+/packages/clinicalomxdb/hub-pipelines/prefect/workers/hpc/users.conf
+# Rendered from hub-ops/grafana/alerting/rules.template.yaml with site.env at each ops start.
+/packages/clinicalomxdb/hub-ops/grafana/provisioning/alerting/rules.yaml
+
+# First-party wheels the image builds stage into their build context. Built per build, never kept.
+dist/

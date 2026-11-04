@@ -1,0 +1,3 @@
+# gitleaks allowlist, read by `gitleaks dir` from the repository root. Each fingerprint is
+# path:rule:line and sits in a block opened by a comment giving the reason it was allowed.
+# tools/drift/publication.py fails a fingerprint with no reason, or one naming an untracked file.

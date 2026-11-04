@@ -1,0 +1,1269 @@
+{
+  "headers": {
+    "content-type": "application/json",
+    "x-uniprot-release": "2026_02",
+    "x-uniprot-release-date": "10-June-2026"
+  },
+  "body": {
+    "entryType": "UniProtKB reviewed (Swiss-Prot)",
+    "primaryAccession": "Q9BZS1",
+    "proteinDescription": {
+      "recommendedName": {
+        "fullName": {
+          "value": "Forkhead box protein P3"
+        }
+      },
+      "alternativeNames": [
+        {
+          "fullName": {
+            "value": "Scurfin"
+          }
+        }
+      ],
+      "contains": [
+        {
+          "recommendedName": {
+            "fullName": {
+              "value": "Forkhead box protein P3, C-terminally processed"
+            }
+          }
+        },
+        {
+          "recommendedName": {
+            "fullName": {
+              "value": "Forkhead box protein P3 41 kDa form"
+            }
+          }
+        }
+      ]
+    },
+    "genes": [
+      {
+        "geneName": {
+          "value": "FOXP3"
+        },
+        "synonyms": [
+          {
+            "value": "IPEX"
+          }
+        ],
+        "orfNames": [
+          {
+            "value": "JM2"
+          }
+        ]
+      }
+    ],
+    "comments": [
+      {
+        "texts": [
+          {
+            "evidences": [
+              {
+                "evidenceCode": "ECO:0000250",
+                "source": "UniProtKB",
+                "id": "Q99JB6"
+              },
+              {
+                "evidenceCode": "ECO:0000269",
+                "source": "PubMed",
+                "id": "15790681"
+              },
+              {
+                "evidenceCode": "ECO:0000269",
+                "source": "PubMed",
+                "id": "17360565"
+              },
+              {
+                "evidenceCode": "ECO:0000269",
+                "source": "PubMed",
+                "id": "17377532"
+              },
+              {
+                "evidenceCode": "ECO:0000269",
+                "source": "PubMed",
+                "id": "18354202"
+              },
+              {
+                "evidenceCode": "ECO:0000269",
+                "source": "PubMed",
+                "id": "18368049"
+              },
+              {
+                "evidenceCode": "ECO:0000269",
+                "source": "PubMed",
+                "id": "21458306"
+              },
+              {
+                "evidenceCode": "ECO:0000269",
+                "source": "PubMed",
+                "id": "23169781"
+              },
+              {
+                "evidenceCode": "ECO:0000269",
+                "source": "PubMed",
+                "id": "24835996"
+              },
+              {
+                "evidenceCode": "ECO:0000269",
+                "source": "PubMed",
+                "id": "30513302"
+              },
+              {
+                "evidenceCode": "ECO:0000269",
+                "source": "PubMed",
+                "id": "32644293"
+              },
+              {
+                "evidenceCode": "ECO:0000303",
+                "source": "PubMed",
+                "id": "23947341"
+              },
+              {
+                "evidenceCode": "ECO:0000303",
+                "source": "PubMed",
+                "id": "24354325"
+              },
+              {
+                "evidenceCode": "ECO:0000303",
+                "source": "PubMed",
+                "id": "24722479"
+              }
+            ],
+            "value": "Transcriptional regulator which is crucial for the development and inhibitory function of regulatory T-cells (Treg) (PubMed:17377532, PubMed:21458306, PubMed:23947341, PubMed:24354325, PubMed:24722479, PubMed:24835996, PubMed:30513302, PubMed:32644293). Plays an essential role in maintaining homeostasis of the immune system by allowing the acquisition of full suppressive function and stability of the Treg lineage, and by directly modulating the expansion and function of conventional T-cells (PubMed:23169781). Can act either as a transcriptional repressor or a transcriptional activator depending on its interactions with other transcription factors, histone acetylases and deacetylases (PubMed:17377532, PubMed:21458306, PubMed:23947341, PubMed:24354325, PubMed:24722479). The suppressive activity of Treg involves the coordinate activation of many genes, including CTLA4 and TNFRSF18 by FOXP3 along with repression of genes encoding cytokines such as interleukin-2 (IL2) and interferon-gamma (IFNG) (PubMed:17377532, PubMed:21458306, PubMed:23947341, PubMed:24354325, PubMed:24722479). Inhibits cytokine production and T-cell effector function by repressing the activity of two key transcription factors, RELA and NFATC2 (PubMed:15790681). Mediates transcriptional repression of IL2 via its association with histone acetylase KAT5 and histone deacetylase HDAC7 (PubMed:17360565). Can activate the expression of TNFRSF18, IL2RA and CTLA4 and repress the expression of IL2 and IFNG via its association with transcription factor RUNX1 (PubMed:17377532). Inhibits the differentiation of IL17 producing helper T-cells (Th17) by antagonizing RORC function, leading to down-regulation of IL17 expression, favoring Treg development (PubMed:18368049). Inhibits the transcriptional activator activity of RORA (PubMed:18354202). Can repress the expression of IL2 and IFNG via its association with transcription factor IKZF4 (By similarity)"
+          }
+        ],
+        "commentType": "FUNCTION"
+      },
+      {
+        "commentType": "SUBCELLULAR LOCATION",
+        "note": {
+          "texts": [
+            {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000250",
+                  "source": "UniProtKB",
+                  "id": "Q99JB6"
+                },
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "22678915"
+                }
+              ],
+              "value": "Predominantly expressed in the cytoplasm in activated conventional T-cells whereas predominantly expressed in the nucleus in regulatory T-cells (Treg). The 41 kDa form derived by proteolytic processing is found exclusively in the chromatin fraction of activated Treg cells (By similarity)"
+            }
+          ]
+        },
+        "subcellularLocations": [
+          {
+            "location": {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000255",
+                  "source": "PROSITE-ProRule",
+                  "id": "PRU00089"
+                },
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "17360565"
+                },
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "18354202"
+                },
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "22678915"
+                },
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "23396208"
+                },
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "23973222"
+                },
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "23973223"
+                },
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "32644293"
+                }
+              ],
+              "value": "Nucleus",
+              "id": "SL-0191"
+            }
+          },
+          {
+            "location": {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "22678915"
+                }
+              ],
+              "value": "Cytoplasm",
+              "id": "SL-0086"
+            }
+          }
+        ]
+      }
+    ],
+    "uniProtKBCrossReferences": [
+      {
+        "database": "GO",
+        "id": "GO:0000785",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:chromatin"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "ISA:NTNU_SB"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005737",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:cytoplasm"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "22678915"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005829",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:cytosol"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:HPA"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005654",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:nucleoplasm"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:HPA"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005634",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:nucleus"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "11483607"
+          },
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "16873067"
+          },
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "16920951"
+          },
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "22678915"
+          },
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "24012345"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0032991",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:protein-containing complex"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "NAS:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000303",
+            "source": "PubMed",
+            "id": "16903909"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0003677",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:DNA binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IMP:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000315",
+            "source": "PubMed",
+            "id": "21458306"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0001228",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:DNA-binding transcription activator activity, RNA polymerase II-specific"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "19276356"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0003700",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:DNA-binding transcription factor activity"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "11483607"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0000981",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:DNA-binding transcription factor activity, RNA polymerase II-specific"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "ISA:NTNU_SB"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0001227",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:DNA-binding transcription repressor activity, RNA polymerase II-specific"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IBA:GO_Central"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0035035",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:histone acetyltransferase binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IPI:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000353",
+            "source": "PubMed",
+            "id": "17360565"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0042826",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:histone deacetylase binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IPI:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000353",
+            "source": "PubMed",
+            "id": "17360565"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0051059",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:NF-kappaB binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "NAS:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000303",
+            "source": "PubMed",
+            "id": "16652169"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0051525",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:NFAT protein binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IPI:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000353",
+            "source": "PubMed",
+            "id": "16873067"
+          },
+          {
+            "evidenceCode": "ECO:0000353",
+            "source": "PubMed",
+            "id": "21458306"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0042803",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:protein homodimerization activity"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "21458306"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0000978",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:RNA polymerase II cis-regulatory region sequence-specific DNA binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "ISS:UniProtKB"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0043565",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:sequence-specific DNA binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "11483607"
+          },
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "16873067"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:1990837",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:sequence-specific double-stranded DNA binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:ARUK-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "28473536"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0003714",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:transcription corepressor activity"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:Ensembl"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0008270",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:zinc ion binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:UniProtKB-KW"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0002362",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:CD4-positive, CD25-positive, alpha-beta regulatory T cell lineage commitment"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "TAS:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000304",
+            "source": "PubMed",
+            "id": "18368049"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0006338",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:chromatin remodeling"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "NAS:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000303",
+            "source": "PubMed",
+            "id": "16903909"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0006351",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:DNA-templated transcription"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:UniProtKB-KW"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0014045",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:establishment of endothelial blood-brain barrier"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:Ensembl"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0046007",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:negative regulation of activated T cell proliferation"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "NAS:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000303",
+            "source": "PubMed",
+            "id": "11483607"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0008285",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:negative regulation of cell population proliferation"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "15652505"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0001818",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:negative regulation of cytokine production"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "11483607"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0050687",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:negative regulation of defense response to virus"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:Ensembl"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0045892",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:negative regulation of DNA-templated transcription"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "11483607"
+          },
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "16920951"
+          },
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "22678915"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0050777",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:negative regulation of immune response"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "15652505"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0032693",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:negative regulation of interleukin-10 production"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "15466453"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0032700",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:negative regulation of interleukin-17 production"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IMP:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000315",
+            "source": "PubMed",
+            "id": "18368049"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0032703",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:negative regulation of interleukin-2 production"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "15466453"
+          },
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "17377532"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0032713",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:negative regulation of interleukin-4 production"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "15466453"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0002725",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:negative regulation of T cell cytokine production"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "15466453"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0042130",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:negative regulation of T cell proliferation"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "15466453"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:2000320",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:negative regulation of T-helper 17 cell differentiation"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IMP:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000315",
+            "source": "PubMed",
+            "id": "23169781"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0000122",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:negative regulation of transcription by RNA polymerase II"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "16873067"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0032689",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:negative regulation of type II interferon production"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "15466453"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0032831",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:positive regulation of CD4-positive, CD25-positive, alpha-beta regulatory T cell differentiation"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "TAS:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000304",
+            "source": "PubMed",
+            "id": "18368049"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0045893",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:positive regulation of DNA-templated transcription"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "15466453"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0045591",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:positive regulation of regulatory T cell differentiation"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "30513302"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0045944",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:positive regulation of transcription by RNA polymerase II"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IMP:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000315",
+            "source": "PubMed",
+            "id": "19276356"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0002667",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:regulation of T cell anergy"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "ISS:UniProtKB"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0006357",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:regulation of transcription by RNA polymerase II"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "16652169"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0045066",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:regulatory T cell differentiation"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProt"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "32644293"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0032496",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:response to lipopolysaccharide"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:Ensembl"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:1901355",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:response to rapamycin"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:Ensembl"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0009615",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:response to virus"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEP:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000270",
+            "source": "PubMed",
+            "id": "20583921"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0042110",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:T cell activation"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "15466453"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0043029",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:T cell homeostasis"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "NAS:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000303",
+            "source": "PubMed",
+            "id": "11483607"
+          }
+        ]
+      }
+    ],
+    "extraAttributes": {
+      "uniParcId": "UPI000012ADED"
+    }
+  }
+}

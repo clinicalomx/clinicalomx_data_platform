@@ -1,0 +1,47 @@
+# env files with secrets - matches .env and worker.env at any depth.
+# The hub schemas are named hub-*/environment.example, which this does not match, so they stay
+# tracked. worker.env.example is likewise a different name.
+*.env
+# direnv's loader, at any depth. It holds the operator's OpenStack application
+# credential and the state passphrase. *.env does NOT match it: that pattern is a
+# suffix glob and this name ends in "rc". .envrc.example is a different name, so
+# the committed schema stays tracked.
+.envrc
+hub/db_data/
+# The dev-box defaults for two of the three per-host paths in hub-database/environment.example. On
+# the VM both live outside the repo; here they are working state. Both are also things that must
+# never be committed on any host: the cluster itself, and a private key.
+hub-database/pgdata/
+hub-database/certs/
+# NOT a current default: LAMIN_HOME now defaults to ~/.clinicalomxdb/lamin, outside the tree, so the
+# API key and the Postgres URI the connect writes never land in the repo at all. KEEP this line
+# anyway. It is the only thing stopping those credentials being committed by a developer whose .env
+# still names the old in-tree ./lamin, which keeps working. Not dead, so do not delete it.
+hub-database/lamin/
+**/__pycache__/
+**/*.pyc
+**/*.egg-info/
+.DS_Store
+*.sqlite3
+
+# Portal dev loop artefacts: captures and queued edit intents are local working state.
+hub-ops/devserver/shots/
+hub-ops/devserver/notes.jsonl
+# Backup the inspector writes before touching index.html.
+*.html.bak
+
+# Lavish review surfaces: a rendering of something already recorded elsewhere, plus a copy
+# of the house stylesheet from home-config. Regenerated on demand, so it is working state.
+.lavish/
+
+# Prismor state: session state and absolute machine paths, at every depth. Never commit it.
+.prismor/
+
+# VM runtime artifacts observed by O-1 (2026-08-28): these appear in the deployed
+# checkout's git status and bury real drift. Exactly what was observed, nothing wider.
+# *.egg-info/ from that list is already covered above.
+hub-pipelines/prefect/worker-home/
+hub-pipelines/prefect/prefect-home/
+hub-database/sandbox/
+hub-database/.lavish/
+hub-storage/hpc_scratch/project/

@@ -1,0 +1,60 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.python-version
+
+# uv: uv.lock IS committed (reproducible builds: CI/containers `uv sync --frozen` need it).
+
+# Training outputs / experiment tracking (not git-tracked; reproducible from code + data)
+runs/
+mlruns/
+wandb/
+
+# Model weights: pretrained downloads at root + any checkpoints
+*.pt
+*.onnxa
+
+# data
+*.zarr
+
+# The old local working area for training data. It held 545 de-identified slide PNGs that were
+# committed by accident and removed 2026-10-07; their governed copies are lamindb Collections
+# (`clinical-roi/thumbnails`, `clinical-roi/shared/{pyramid_low_scale,tma_crops}`). The whole
+# directory is ignored, so data dropped back here stays local. `roi_detection/tests/test_packaging.py` fails if
+# anything under it is tracked anyway, which is what stops a `git add -f`.
+roi_detection/objectives/
+
+# Local materialization caches for the declarative data layer (data_io import).
+# Canonical data lives in lamindb / RDM, not git.
+_cache/
+
+# Local scratch
+sandbox/
+test.py
+qptiff_thumbnails.zip
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+
+# ENV
+.env
+
+# local db
+.lamindb
+
+# slurm jobs
+slurm*.error
+slurm*.output
+
+# container binaries
+*.sif
+
+# Written by roi_detection/containers/register_environments.py on every run.
+roi_detection/containers/apptainer/

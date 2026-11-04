@@ -1,0 +1,27 @@
+# Run this stage with: python -m croi tma_core ingest-labels
+#
+# inputs   = the governed Artifacts/Collections this stage CONSUMES (declarative).
+# outputs  = the governed Collection it PRODUCES (the core dataset).
+# data_dir = TRANSIENT staging subdir under the storage root (<storage_root>/<data_dir>).
+#   This round's raw LS export is dropped here; its files all become governed
+#   artifacts (notes.json -> inputs.notes via ensure; the label .txts ->
+#   core_labels/*.txt), so nothing flows in untracked.
+# instance / storage_root / region come from the shared manifest (manifest.yaml).
+data_dir: core_labels
+
+inputs:
+  # The annotated image substrate core labels were drawn on, pinned by `version`.
+  # This is the retrofitted union of the actual annotated images (tma_crops +
+  # pyramid_low_scale projections). See clinical-roi/core/annotated_images. It
+  # replaces pinning the two general->core release collections separately, which
+  # didn't match the annotated set. Bump the version to adopt a new substrate.
+  images: {kind: collection, key: clinical-roi/core/annotated_images, version: "1"}
+  notes:  {kind: artifact,   key: core_labels/notes.json, source: notes.json}  # full_core/partial_core taxonomy
+
+outputs:
+  labels:
+    key_template: "core_labels/{name}"   # per-label artifact key (materialize output; {name}=LS filename)
+    description: "Per-image YOLO core label (full_core / partial_core)."
+  dataset:
+    key: clinical-roi/core
+    description: "Core dearray dataset: (image, label) pairs for full_core / partial_core detection."

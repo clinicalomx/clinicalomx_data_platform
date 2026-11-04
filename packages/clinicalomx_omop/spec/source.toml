@@ -1,0 +1,21 @@
+# Where the vendored OMOP CDM specification came from. `scripts/generate_cdm.py` refuses to
+# run when a file's sha256 differs from the one recorded here, so the committed record types
+# can only ever be explained by these bytes.
+#
+# Refresh (a CDM bump is a new tag, new files and a regenerated module, reviewed as one diff):
+#   curl -sSfLO https://raw.githubusercontent.com/OHDSI/CommonDataModel/<commit>/inst/csv/OMOP_CDMv<version>_Field_Level.csv
+#   curl -sSfLO https://raw.githubusercontent.com/OHDSI/CommonDataModel/<commit>/inst/csv/OMOP_CDMv<version>_Table_Level.csv
+#
+# Licence: Apache License 2.0, as the upstream package DESCRIPTION declares
+# (https://www.apache.org/licenses/LICENSE-2.0). The files are redistributed unmodified.
+# They describe the model's shape only and carry no terminology content.
+
+cdm_version = "5.4"
+repository = "https://github.com/OHDSI/CommonDataModel"
+tag = "v5.4.3"
+commit = "746a15e0fb36a95ba6cc0993737f1273bbad92f2"
+license = "Apache-2.0"
+
+[files]
+field_level = { name = "OMOP_CDMv5.4_Field_Level.csv", sha256 = "2b763c7a2aeb309372c1564350939551531318e2078fd4443e03b2741e79b77c" }
+table_level = { name = "OMOP_CDMv5.4_Table_Level.csv", sha256 = "a8ad96bc9eece99b8496ea7ca4e5c61df7ec6be09688862e46e326dfc82b8284" }

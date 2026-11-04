@@ -1,0 +1,6 @@
+.venv
+__pycache__
+*.pyc
+worker.env
+*.egg-info
+workers/vm-process/.env

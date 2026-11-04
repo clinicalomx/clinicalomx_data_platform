@@ -1,0 +1,9 @@
+# gitleaks configuration, read from the repository root by `gitleaks dir .`: the default rules,
+# plus one exemption. Per-finding allowlisting is .gitleaksignore, where each entry carries a reason.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "detect-secrets records each reviewed finding in .secrets.baseline as the sha1 of the value, never the value"
+regexTarget = "line"
+regexes = ['''^\s*"hashed_secret": "[0-9a-f]{40}",?$''']

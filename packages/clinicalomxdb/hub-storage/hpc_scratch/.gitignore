@@ -1,0 +1,7 @@
+# Everything under this directory is a mount point for HPC scratch, so its contents are host
+# state rather than source. The python-lamindb container binds hub-storage/hpc_scratch at
+# /scratch, so on any host that is not the HPC make schema-apply registers the declared root
+# storage.hpc_root, a /scratch/... path, into the working tree and leaves a .lamindb directory
+# there. This keeps that out of the index.
+*
+!.gitignore

@@ -1,0 +1,30 @@
+# SEED TARGET CLAIMS: which proteins a marker binds, one claim per marker.
+#
+# The column contract is declared in ../seed_spec.py, not here, and seed_data/README.md is
+# generated from it. A renamed or missing column fails on read.
+#
+# Marker-to-protein is a CLAIM, not an identity field: it is disputable, a human reviews it,
+# and a later claim can retract it. Each row reads into one target claim through
+# domain.target.seed_claims, with source human and source_id the curated_by value.
+#
+# candidates is a CANDIDATE SET, pipe separated, and every member is kept. An accession may be
+# an IsoId, P08575-8, where the candidates are isoforms. kind says what the set means:
+#
+#   single             one protein, isoform not distinguished. Exactly one candidate
+#   isoform_ambiguous  one of these isoforms, unknown which. One parent accession
+#   cross_reactive     binds all of them at once, panCK across the keratins
+#   complex_member     part of a complex, whose members are the candidates
+#
+# The kind decides how the candidates' localisations combine: OVERLAP unless the kind declares
+# SUM, and only cross_reactive does. domain/target.py is the one place that rule is written.
+#
+# A marker with no row here targets no protein on record: DAPI is a DNA stain and BLANK is an
+# empty channel, so neither has one.
+canonical_name,kind,candidates,evidence,curated_by
+E-CADHERIN,single,P12830,E-cadherin (CDH1),seed
+NAKATPASE,single,P05023,Sodium/potassium-transporting ATPase subunit alpha-1 (ATP1A1),seed
+VIMENTIN,single,P08670,Vimentin (VIM),seed
+CITRATE_SYNTHASE,single,O75390,"Citrate synthase, mitochondrial (CS)",seed
+LDHA,single,P00338,L-lactate dehydrogenase A chain (LDHA),seed
+FOXP3,single,Q9BZS1,Forkhead box protein P3 (FOXP3),seed
+CD8A,single,P01732,T-cell surface glycoprotein CD8 alpha chain (CD8A),seed

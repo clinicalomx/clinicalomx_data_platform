@@ -1,0 +1,59 @@
+data_dir: ml_experiments
+
+inputs:
+    train_split: { kind: collection, key: clinical-roi/general/splits/train }
+    val_split: { kind: collection, key: clinical-roi/general/splits/val }
+    test_split: { kind: collection, key: clinical-roi/general/splits/test }
+    categories: { kind: artifact, key: general_labels/notes.json }
+
+outputs:
+    model:
+        key: models/general/best.pt # stable key; lamindb cuts versions
+        description: "champion for general ROI detection"
+    metrics:
+        key: "eval/general/v{version}/{view}/metrics.json" # {version}=champion ver, {view}=test|all
+        description: "Eval metrics (recall + IoU) for the champion"
+    contact_sheet:
+        key: "eval/general/v{version}/{view}/worst_predictions.png"
+        description: "Worst-prediction contact sheet for the champion"
+
+parameters:
+    # v2: the same data, splits and eval as 3_train_and_eval.yaml, trained with RF-DETR.
+    # Selected by name: `python -m croi tissue_objects train --config 3_train_and_eval_rfdetr.yaml`,
+    # or the train-general deployment's `config` parameter. Its own `name`, so the two never share a
+    # run dir or resume into each other; both register as versions of roi-general, and which one
+    # production runs is the alias, never this file.
+    framework: rfdetr
+    name: rfdetr_nano_clinical_roi
+    rfdetr_model_name: rf-detr-nano.pth # published COCO-pretrained base, saved in base_models/
+    mlflow_experiment_name: clinical-roi/general-train
+
+    resume: auto
+
+    # `train:` is passed VERBATIM to RFDETR.train, so these are RF-DETR's keywords, not
+    # ultralytics'. There is no mosaic/hsv block: RF-DETR's own default augmentation applies.
+    train:
+        epochs: 150
+        resolution: 640 # the imgsz every production caller passes (DETECT_IMGSZ); an RF-DETR
+                        # checkpoint does not record it, so a caller must ask for it
+        multi_scale: false   # rfdetr defaults it on, which trains a 640 nano at 800 and at
+                             # random 480..800 batch sizes; off, every image trains at `resolution`
+        batch_size: 8
+        grad_accum_steps: 2
+        lr: 1.0e-4
+        seed: 42
+        num_workers: 0   # no loader worker processes: rfdetr makes workers persistent when this is
+                         # above 0, and the one cluster fit died in teardown on a dead persistent
+                         # worker. Loading measured ~30-40 ms per ~1100 px image; this objective's
+                         # RF-DETR epoch time is UNMEASURED, so the slowdown ratio is unknown.
+        early_stopping: true
+        early_stopping_patience: 30
+        # device: cuda # uncomment + set on HPC GPU nodes
+
+    eval:
+        mlflow_experiment: clinical-roi/general-eval
+        split: test
+        co_occurrence: false
+        imgsz: 640 # the network input size; keep it equal to train.resolution
+        conf: 0.25
+        worst_n: 24

@@ -1,0 +1,41 @@
+# ROI review Streamlit app (HITL gate). Control-plane only: clinical_roi/bgnorm are
+# lazy-imported and never exercised here, so this image stays light (no DL stack).
+#
+# The build CONTEXT is the package root (packages/clinicalomx_pipelines), where pyproject.toml and
+# .dockerignore live; this file sits one level down in qptiff_pipeline/:
+#   uv build --wheel --out-dir dist ../clinicalomx
+#   docker build -f qptiff_pipeline/Dockerfile.review -t clinicalomx-review .
+FROM python:3.11-slim
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+RUN apt-get update && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY . /app
+
+# Install the project with ONLY the review + prefect extras into a venv.
+# We use `uv pip install`, NOT `uv sync`: sync builds a UNIVERSAL lock that resolves every
+# extra, including `compute` (clinical-roi/bgnorm), whose path sources don't exist in this
+# image and aren't needed here (lazy-imported, unused in the review UI). `uv pip install`
+# resolves only the selected extras, so those path deps are never touched.
+# `set -e` makes a resolve failure FAIL the build; the old `&& ... || true` masked it,
+# producing a green build with an empty venv (only Python, no streamlit).
+# First-party code is a wheel built from this checkout into dist/ by the image workflow, and
+# --no-sources drops the monorepo path source this context cannot reach. A `name @ file://`
+# requirement cannot be satisfied by any index, so no published clinicalomx can be selected.
+COPY dist /src/dist
+RUN --mount=type=cache,target=/root/.cache/uv \
+    set -eu; whl=$(echo /src/dist/clinicalomx-*.whl); [ -f "$whl" ]; \
+    uv venv /app/.venv; \
+    VIRTUAL_ENV=/app/.venv uv pip install --no-sources ".[review,prefect]" "clinicalomx[prefect] @ file://$whl"
+
+EXPOSE 8501
+# Run the venv binary directly: no uv at runtime, so no re-resolve of compute path deps.
+# lamindb connection is NOT bootstrapped here. The host runs `lamin connect` once and the
+# container bind-mounts the host ~/.lamin (see clinicalomxdb compose + cloud-init), so lamin
+# is already connected. Bind 0.0.0.0 INSIDE the container; the host only publishes to
+# 127.0.0.1 (see compose), so it stays SSH-tunnel-only (the app has no auth).
+CMD ["/app/.venv/bin/streamlit", "run", "qptiff_pipeline/src/qptiff_pipeline/review/app.py", \
+     "--server.port", "8501", "--server.address", "0.0.0.0", "--server.headless", "true"]

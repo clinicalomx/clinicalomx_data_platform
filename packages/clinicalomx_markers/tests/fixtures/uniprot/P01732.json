@@ -1,0 +1,485 @@
+{
+  "headers": {
+    "content-type": "application/json",
+    "x-uniprot-release": "2026_02",
+    "x-uniprot-release-date": "10-June-2026"
+  },
+  "body": {
+    "entryType": "UniProtKB reviewed (Swiss-Prot)",
+    "primaryAccession": "P01732",
+    "proteinDescription": {
+      "recommendedName": {
+        "fullName": {
+          "value": "T-cell surface glycoprotein CD8 alpha chain"
+        }
+      },
+      "alternativeNames": [
+        {
+          "fullName": {
+            "value": "T-lymphocyte differentiation antigen T8/Leu-2"
+          }
+        }
+      ],
+      "cdAntigenNames": [
+        {
+          "value": "CD8a"
+        }
+      ],
+      "flag": "Precursor"
+    },
+    "genes": [
+      {
+        "geneName": {
+          "value": "CD8A"
+        },
+        "synonyms": [
+          {
+            "value": "MAL"
+          }
+        ]
+      }
+    ],
+    "comments": [
+      {
+        "texts": [
+          {
+            "evidences": [
+              {
+                "evidenceCode": "ECO:0000269",
+                "source": "PubMed",
+                "id": "16236125"
+              },
+              {
+                "evidenceCode": "ECO:0000269",
+                "source": "PubMed",
+                "id": "17678538"
+              },
+              {
+                "evidenceCode": "ECO:0000269",
+                "source": "PubMed",
+                "id": "23657257"
+              },
+              {
+                "evidenceCode": "ECO:0000269",
+                "source": "PubMed",
+                "id": "26082771"
+              }
+            ],
+            "value": "Integral membrane glycoprotein that plays an essential role in the immune response and serves multiple functions in responses against both external and internal offenses. In T-cells, functions primarily as a coreceptor for MHC class I molecule:peptide complex. The antigens presented by class I peptides are derived from cytosolic proteins while class II derived from extracellular proteins. Interacts simultaneously with the T-cell receptor (TCR) and the MHC class I proteins presented by antigen presenting cells (APCs). In turn, recruits the Src kinase LCK to the vicinity of the TCR-CD3 complex. LCK then initiates different intracellular signaling pathways by phosphorylating various substrates ultimately leading to lymphokine production, motility, adhesion and activation of cytotoxic T-lymphocytes (CTLs). This mechanism enables CTLs to recognize and eliminate infected cells and tumor cells. In NK-cells, the presence of CD8A homodimers at the cell surface provides a survival mechanism allowing conjugation and lysis of multiple target cells. CD8A homodimer molecules also promote the survival and differentiation of activated lymphocytes into memory CD8 T-cells"
+          }
+        ],
+        "commentType": "FUNCTION"
+      },
+      {
+        "commentType": "SUBCELLULAR LOCATION",
+        "molecule": "Isoform 1",
+        "note": {
+          "texts": [
+            {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "17341584"
+                }
+              ],
+              "value": "CD8A localizes to lipid rafts only when associated with its partner CD8B"
+            }
+          ]
+        },
+        "subcellularLocations": [
+          {
+            "location": {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "1460019"
+                },
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "17341584"
+                },
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "17678538"
+                }
+              ],
+              "value": "Cell membrane",
+              "id": "SL-0039"
+            },
+            "topology": {
+              "value": "Single-pass type I membrane protein",
+              "id": "SL-9905"
+            }
+          }
+        ]
+      },
+      {
+        "commentType": "SUBCELLULAR LOCATION",
+        "molecule": "Isoform 2",
+        "subcellularLocations": [
+          {
+            "location": {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "7923932"
+                }
+              ],
+              "value": "Secreted",
+              "id": "SL-0243"
+            }
+          }
+        ]
+      }
+    ],
+    "uniProtKBCrossReferences": [
+      {
+        "database": "GO",
+        "id": "GO:0009897",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:external side of plasma membrane"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:MGI"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "17213291"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005576",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:extracellular region"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:UniProtKB-SubCell"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005886",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:plasma membrane"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "2784196"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0044853",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:plasma membrane raft"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "17341584"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0042101",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:T cell receptor complex"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "NAS:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000303",
+            "source": "PubMed",
+            "id": "11131152"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0015026",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:coreceptor activity"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "NAS:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000303",
+            "source": "PubMed",
+            "id": "11131152"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0042288",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:MHC class I protein binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "NAS:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000303",
+            "source": "PubMed",
+            "id": "11131152"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0023024",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:MHC class I protein complex binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "2784196"
+          },
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "9177355"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0002250",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:adaptive immune response"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "NAS:ComplexPortal"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000303",
+            "source": "PubMed",
+            "id": "17145893"
+          },
+          {
+            "evidenceCode": "ECO:0000303",
+            "source": "PubMed",
+            "id": "22081144"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0019882",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:antigen processing and presentation"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "NAS:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000303",
+            "source": "PubMed",
+            "id": "2496167"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0007169",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:cell surface receptor protein tyrosine kinase signaling pathway"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "NAS:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000303",
+            "source": "PubMed",
+            "id": "9830036"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0007166",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:cell surface receptor signaling pathway"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IBA:GO_Central"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0045065",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:cytotoxic T cell differentiation"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IBA:GO_Central"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0006955",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:immune response"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "NAS:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000303",
+            "source": "PubMed",
+            "id": "11131152"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0042110",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:T cell activation"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:ComplexPortal"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "17145893"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0002456",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:T cell mediated immunity"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IBA:GO_Central"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0050852",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:T cell receptor signaling pathway"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:ComplexPortal"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "17145893"
+          }
+        ]
+      }
+    ],
+    "extraAttributes": {
+      "uniParcId": "UPI00001273B4"
+    }
+  }
+}

@@ -1,0 +1,233 @@
+apiVersion: 1
+
+# Alert rules for ADR 0006 Decision 4.
+#
+# DELIVERY IS DELIBERATELY NOT CONFIGURED. No contact point is provisioned here, so a firing rule
+# is red in the Alerting page and goes nowhere else. That is the recorded decision, not an
+# oversight: there is no destination chosen yet, and a rule wired to a broken channel looks like
+# coverage while providing none. When a destination exists, add a contact point and a notification
+# policy alongside this file; the rules do not change.
+#
+# One visible consequence to expect: while a rule is firing, Grafana logs a delivery failure
+# against its built-in email contact point, which has no SMTP server. That error is the absence of
+# a destination showing up honestly, and it lands in Loki like everything else.
+#
+# Every rule keys on a SPECIFIC message, never on a log level. Alerting on levels means restarting
+# the logging stack sets off its own alarms, and the observability containers are excluded from
+# the authentication rule for the same reason: Grafana and Alloy print query text and error
+# strings that would otherwise match.
+#
+# Provisioned rules are read at startup and are read-only in the interface. Editing one there is
+# refused rather than silently discarded, which is why this file is the only place they change.
+#
+# THIS IS A TEMPLATE. Grafana provisions grafana/provisioning/alerting/rules.yaml, which render.py
+# beside this file writes from it before every start of the ops stack (clinicalomxdb.service and
+# `make ops-up`), replacing @CLINICALOMX_SITE_HPC_NAT_ADDRESS@ and @CLINICALOMX_SITE_HPC_COMPUTE_SUBNET@
+# with those site.env values escaped for a regex.
+# The rendered file is gitignored: it carries a site fact. Edit this file, never that one.
+
+groups:
+  - orgId: 1
+    name: clinicalomxdb
+    folder: clinicalOMx
+    # Evaluated every minute. Each rule's own lookback window is set per query below and is much
+    # wider, so a minute of jitter costs nothing.
+    interval: 1m
+    rules:
+
+      # --- 1. the backup sentinel ------------------------------------------------------------
+      # pg-backup-alert.sh runs from systemd OnFailure and logs this exact string before it does
+      # anything else, so it fires even when the optional webhook is unset. Matching the message
+      # rather than the unit is deliberate: the alert script runs as its own unit whose name is
+      # not worth coupling to.
+      - uid: comx-pg-backup-failed
+        title: Postgres backup failed
+        condition: B
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: pg-backup failed and wrote its sentinel file
+          description: >-
+            The nightly dump did not complete. The sentinel is at
+            /mnt/data/artifacts/backups/postgres/LAST_BACKUP_FAILED and must be removed by hand
+            once a good backup has run, or the health endpoint keeps reporting a failure.
+            Investigate with: journalctl -u pg-backup.service -n 100
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            datasourceUid: loki
+            relativeTimeRange:
+              from: 3600
+              to: 0
+            model:
+              refId: A
+              datasource: {type: loki, uid: loki}
+              queryType: instant
+              expr: >-
+                sum(count_over_time({job="journal"} |= `backup failed; wrote sentinel` [1h]))
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {type: gt, params: [0]}
+
+      # --- 2. a unit crash-looping -----------------------------------------------------------
+      # THE RULE THIS WHOLE RECORD EXISTS FOR. Every worker has Restart=always, so a unit that
+      # dies and respawns every few seconds reads as "active" on almost every health poll, and
+      # the portal can only notice the churn while someone happens to be looking at it. systemd
+      # logs this line on each automatic restart, so counting it detects the loop with nobody
+      # watching.
+      #
+      # Grouped by unit, which works only because of the __journal_unit relabel in
+      # alloy/config.alloy; without it these messages are all filed under init.scope.
+      #
+      # Threshold is 3 in 15 minutes. A single restart is normal (a deploy, a reboot, a transient
+      # upstream); three is not.
+      - uid: comx-unit-flapping
+        title: A systemd unit is restarting repeatedly
+        condition: B
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.unit }} has restarted more than three times in fifteen minutes"
+          description: >-
+            The unit is crash-looping rather than being down, which the health endpoint reports as
+            active. Investigate with: journalctl -u {{ $labels.unit }} -n 100
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            datasourceUid: loki
+            relativeTimeRange:
+              from: 900
+              to: 0
+            model:
+              refId: A
+              datasource: {type: loki, uid: loki}
+              queryType: instant
+              expr: >-
+                sum by (unit) (count_over_time({job="journal"} |= `Scheduled restart job` [15m]))
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {type: gt, params: [3]}
+
+      # --- 3. an unexpected source on the HPC-facing ports ----------------------------------
+      # After ADR 0006 stage 1 these two ports are served by Caddy, so its access log is the only
+      # record of who reaches them. The named loggers (hub-ops/caddy/Caddyfile) are what distinguish
+      # them from the portal on 8080.
+      #
+      # remote_ip, NOT client_ip: client_ip honours X-Forwarded-For when trusted proxies are
+      # configured, and an alert that a client can suppress by setting a header is worthless.
+      # remote_ip is the TCP peer and cannot be forged from the request.
+      #
+      # Expected sources, and why each is allowed:
+      #   hpc.nat_address  the facility's shared translation host, which every compute job is
+      #                    seen as. Shared, so this rule cannot tell one user from another; it
+      #                    catches traffic from somewhere else entirely, not misuse from the HPC.
+      #                    A site value, so the regex below names it as a token render.py fills.
+      #   hpc.compute_subnet
+      #                    the compute subnet, for direct paths that bypass the NAT. Also a site
+      #                    value, which render.py fills as one branch per covered prefix.
+      #   172.16-31.x      this host's own containers, reaching the published port through
+      #                    Docker's gateway. The VM's own workers land here.
+      #   127.0.0.1        the host itself
+      - uid: comx-unexpected-api-source
+        title: Unexpected source address on the HPC API ports
+        condition: B
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: A request reached port 4200 or 5000 from an address that is not the HPC
+          description: >-
+            Only the facility NAT, the compute subnet and this host should reach these ports; the
+            security group is supposed to drop everything else at the hypervisor. A hit here means
+            either the security group has been widened or the allowlist above is out of date.
+            Inspect in Explore with the query on this rule.
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            datasourceUid: loki
+            relativeTimeRange:
+              from: 900
+              to: 0
+            model:
+              refId: A
+              datasource: {type: loki, uid: loki}
+              queryType: instant
+              expr: >-
+                sum(count_over_time({job="docker", container="clinicalomxdb_caddy"}
+                | json
+                | logger =~ `http\.log\.access\.(prefect_api|mlflow_api)`
+                | request_remote_ip !~ `@CLINICALOMX_SITE_HPC_NAT_ADDRESS@|@CLINICALOMX_SITE_HPC_COMPUTE_SUBNET@|172\.(1[6-9]|2[0-9]|3[01])\..*|127\..*`
+                [15m]))
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {type: gt, params: [0]}
+
+      # --- 4. repeated authentication failures ------------------------------------------------
+      # Both audiences in one rule, because the interesting signal is the same: someone trying
+      # credentials repeatedly. sshd and the login relay report the first three strings; Postgres
+      # reports the fourth, which is only visible because log_connections is on
+      # (hub-database/docker-compose.yml).
+      #
+      # The observability containers are excluded because they echo query text and error strings:
+      # this rule's own expression contains every phrase it matches on, so without the exclusion
+      # Grafana logging a query error would satisfy the rule that produced it.
+      #
+      # Ten in fifteen minutes. A person fumbling a password or a DUO timeout produces a handful;
+      # this is meant to catch a machine.
+      - uid: comx-auth-failures
+        title: Repeated authentication failures
+        condition: B
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: More than ten failed authentications in fifteen minutes
+          description: >-
+            SSH, the HPC login relay and Postgres all report here. Postgres on 5432 is reachable
+            from the facility's shared translation host and is password-only, so it is the most
+            exposed of the three.
+        noDataState: OK
+        execErrState: Error
+        data:
+          - refId: A
+            datasourceUid: loki
+            relativeTimeRange:
+              from: 900
+              to: 0
+            model:
+              refId: A
+              datasource: {type: loki, uid: loki}
+              queryType: instant
+              expr: >-
+                sum(count_over_time({job=~"journal|docker",
+                container!~"clinicalomxdb_(grafana|alloy|loki|prometheus)"}
+                |~ `Failed password|Invalid user|Failed keyboard-interactive|password authentication failed`
+                [15m]))
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: {type: gt, params: [10]}

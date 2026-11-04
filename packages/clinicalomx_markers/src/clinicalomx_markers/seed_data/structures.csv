@@ -1,0 +1,36 @@
+# STRUCTURES: which GO cellular component a curated UniProt localisation term names.
+#
+# The column contract is declared in ../seed_spec.py, not here, and seed_data/README.md is
+# generated from it. A renamed or missing column fails on read.
+#
+# This file IS the mapping, so it is where a reviewer disagrees with it: one row per term,
+# the term spelled exactly as UniProt's SUBCELLULAR LOCATION comment spells it, and the GO
+# identifier it is read as. domain/structure.py reads it and nothing else.
+#
+# The evidence is the CURATED UniProt prose and never the go_c cross-references. go_c is far
+# broader and noisier: LDHA's curated localisation is Cytoplasm, and go_c adds nucleus and
+# membrane, which pushes segmentation role proposals toward the unsafe answers. The go_cc
+# claim lists only mapped identifiers and carries no unmapped term. A term with no row here
+# appears in the curate-time report (domain/structure.py), never filled in from go_c.
+#
+# go_release is the GO release the row was checked against, and must equal
+# seed_spec.GO_RELEASE. Moving the pin makes every row fail until it is re-checked, which is
+# the point: GO merges and obsoletes terms between releases.
+uniprot_location,go_id,go_name,go_release,curated_by
+Cytoplasm,GO:0005737,cytoplasm,2025-10-10,seed
+"Cytoplasm, cytoskeleton",GO:0005856,cytoskeleton,2025-10-10,seed
+Nucleus,GO:0005634,nucleus,2025-10-10,seed
+Nucleus matrix,GO:0016363,nuclear matrix,2025-10-10,seed
+Cell membrane,GO:0005886,plasma membrane,2025-10-10,seed
+Basolateral cell membrane,GO:0016323,basolateral plasma membrane,2025-10-10,seed
+"Cell membrane, sarcolemma",GO:0042383,sarcolemma,2025-10-10,seed
+Cell junction,GO:0030054,cell junction,2025-10-10,seed
+"Cell junction, adherens junction",GO:0005912,adherens junction,2025-10-10,seed
+"Cell junction, desmosome",GO:0030057,desmosome,2025-10-10,seed
+"Cell projection, axon",GO:0030424,axon,2025-10-10,seed
+Mitochondrion,GO:0005739,mitochondrion,2025-10-10,seed
+Mitochondrion matrix,GO:0005759,mitochondrial matrix,2025-10-10,seed
+Melanosome,GO:0042470,melanosome,2025-10-10,seed
+Endosome,GO:0005768,endosome,2025-10-10,seed
+"Golgi apparatus, trans-Golgi network",GO:0005802,trans-Golgi network,2025-10-10,seed
+Secreted,GO:0005576,extracellular region,2025-10-10,seed

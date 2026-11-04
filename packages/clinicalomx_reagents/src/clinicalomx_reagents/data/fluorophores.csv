@@ -1,0 +1,23 @@
+# CANONICAL DYES, one row per fluorophore, named once per lab.
+#
+# The column contract is declared in ../spec.py, not here, and data/README.md is
+# generated from it. A renamed or missing column fails on read.
+#
+# A dye is not a marker. DAPI appears in both files and means two different things: the
+# analyte a channel measures, and the molecule that emits the light. A dye's other spellings
+# are its `aliases` cell, pipe separated, and never a marker alias claim.
+#
+# excitation_nm / emission_nm are the vendor's nominal peaks, kept for channel sanity checks
+# (an AF750 channel imaged in the 520 band is a labelling error, not a biology result). They
+# are provisional like every row here.
+#
+# fluorofinder_url stays EMPTY until someone has opened it. Spectra are the one field a
+# reader will follow, and a wrong or dead link is worse than no link, exactly as an uncitable
+# claim is worse than no claim.
+#
+# status: active | draft   (draft rows are validated on every run but never seeded)
+canonical_name,excitation_nm,emission_nm,fluorofinder_url,aliases,status
+DAPI,358,461,,,draft
+ATTO550,554,576,,,draft
+ALEXA_FLUOR_647,650,668,,,draft
+ALEXA_FLUOR_750,749,775,,AF750,draft

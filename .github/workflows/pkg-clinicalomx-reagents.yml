@@ -1,0 +1,36 @@
+# CI for packages/clinicalomx_reagents.
+name: pkg-clinicalomx-reagents
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/clinicalomx_reagents/**"
+      - ".github/workflows/pkg-clinicalomx-reagents.yml"
+  pull_request:
+    paths:
+      - "packages/clinicalomx_reagents/**"
+      - ".github/workflows/pkg-clinicalomx-reagents.yml"
+
+defaults:
+  run:
+    working-directory: packages/clinicalomx_reagents
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install
+        run: uv sync --locked
+
+      - name: Tests
+        run: uv run pytest -q
+
+      - name: Lint
+        run: uv run ruff check src tests

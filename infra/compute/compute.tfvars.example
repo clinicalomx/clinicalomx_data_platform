@@ -1,0 +1,50 @@
+# Copy to compute.tfvars (gitignored) and fill in. 
+# This root launches dev boxes or compute VMs
+# Run:
+#   tofu init -backend-config="key=staging/compute/terraform.tfstate"
+#   tofu apply -var-file=compute.tfvars
+#x
+# Env needed: OS_* (source RC), AWS_ACCESS_KEY_ID/SECRET, AWS_REGION=us-east-1, AWS_ENDPOINT_URL_S3,
+#             TF_VAR_state_encryption_passphrase, TF_CLI_ARGS_init (the state bucket).
+#             infra/control_plane/.envrc.example sets all of them.
+
+# Which control plane to attach to (infra/control_plane control_plane.instance_name):
+# if prod -> "clinicalomxhub", staging -> "clinicalomxhub-staging"
+
+# The cloud's FIP-capable external network, should be same as control_plane
+external_network_name = "REPLACE-WITH-EXTERNAL-NETWORK"
+
+# Define users
+users = {
+  userA = {
+    ssh_authorized_keys = [
+      # "ssh-ed25519 AAAA... user@laptop",
+    ]
+    ssh_ingress_cidrs = [
+      # "REPLACE.WITH.USER.IP/32",
+    ]
+  }
+
+  admin = {
+    ssh_authorized_keys = [
+      # "ssh-ed25519 AAAA... admin@laptop",
+    ]
+    ssh_ingress_cidrs = [
+      # "REPLACE.WITH.DEV.IP/32",
+    ]
+  }
+}
+
+# Define VMs / compute nodes
+# Each VM has:
+#   - one dedicated, pre-existing volume mounted at /home, 
+#     so every user's home persists
+#   - users: a list of names from the users map above; 
+#     each gets a Linux account on the box.
+compute_nodes = {
+  tau = { # node name
+    flavor      = "m3.large" # https://support.ehelp.edu.au/support/solutions/articles/6000205341-nectar-flavors
+    volume_name = "compute-tau-data" # pre-existing. if not run openstack volume create --size 200 compute-tau-data
+    users       = ["userA", "admin"] # match users above
+  }
+}

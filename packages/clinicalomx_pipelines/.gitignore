@@ -1,0 +1,16 @@
+assets/external/
+*.db
+.web
+.states
+*.py[cod]
+.env
+__pycache__/
+*.pyc
+.venv/
+.venv-review-dev/
+
+# Reflex build output. `reflex.lock/` IS committed - it pins the npm graph the image builds
+# against - but `.web/` is node_modules and Vite scratch.
+.web/
+assets/external/
+.states

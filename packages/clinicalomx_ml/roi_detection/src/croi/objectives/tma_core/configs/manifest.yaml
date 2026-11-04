@@ -1,0 +1,18 @@
+# Shared environment manifest for the `tma_core` objective.
+# instance / storage / services live here ONCE; per-stage configs declare only
+# their inputs/outputs/params (see 1_ingest_labels.yaml).
+# The instance and the storage root are site values (site.yaml lamin.instance and
+# storage.model_root), expanded by croi.environment.InstanceManifest.
+instance: "${LAMIN_INSTANCE}"
+
+project:
+  project_name: "clinical-roi-core"
+  project_description: "Dearray a detected TMA grid into per-core (full_core / partial_core) shapes."
+
+storage:
+  storage_root: "${CLINICALOMX_SITE_MODEL_ROOT}"
+  region: hpc
+
+services:
+  mlflow:
+    uri_env: MLFLOW_TRACKING_URI

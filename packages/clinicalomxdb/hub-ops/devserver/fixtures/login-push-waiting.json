@@ -1,0 +1,16 @@
+[
+  {
+    "state": "prompt",
+    "prompt": "Password:",
+    "secret": true,
+    "message": "",
+    "emits": "Password: "
+  },
+  {
+    "state": "waiting",
+    "prompt": "",
+    "secret": false,
+    "message": "",
+    "emits": "\nPushed a login request to your device...\n"
+  }
+]

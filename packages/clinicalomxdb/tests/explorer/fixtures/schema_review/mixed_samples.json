@@ -1,0 +1,48 @@
+[
+  {
+    "_comment": [
+      "The mixed case panel 2 must not render green over. Artifact carries uid, so its merged",
+      "feature column arrives and both of its cells are judged clean: judged is positive and",
+      "nothing is skipped, which is what used to be enough for the plain green banner.",
+      "Collection below is the other half."
+    ],
+    "registry": "Artifact",
+    "columns": ["uid", "key", "n_cells"],
+    "merged": ["n_cells"],
+    "rows": [
+      ["a1QrTz00", "cohort1/slide01.ome.tiff", "1200"],
+      ["a2QrTz01", "cohort1/slide02.ome.tiff", "980"]
+    ],
+    "count": 2,
+    "truncated": false,
+    "elapsed": 0.204,
+    "expression": "ln.Artifact.filter().order_by('-created_at')[:20].to_dataframe()",
+    "image_columns": [],
+    "images_omitted": 0,
+    "features_in_scope": [
+      {"name": "n_cells", "dtype": "int", "values": ["1200", "980"]}
+    ]
+  },
+  {
+    "_comment": [
+      "Collection carries no uid, so lamin_api._apply_merge returns the frame unchanged and the",
+      "feature it was asked to merge reaches no column. Nothing here was judged, and neither the",
+      "banner nor this registry's own heading may read as though it was."
+    ],
+    "registry": "Collection",
+    "columns": ["name", "description"],
+    "merged": ["cell_type"],
+    "rows": [
+      ["thumbnails", "Per-image YOLO label thumbnails."]
+    ],
+    "count": 1,
+    "truncated": false,
+    "elapsed": 0.028,
+    "expression": "ln.Collection.filter().order_by('-created_at')[:20].to_dataframe()",
+    "image_columns": [],
+    "images_omitted": 0,
+    "features_in_scope": [
+      {"name": "cell_type", "dtype": "cat[ULabel]", "values": ["B cell", "T cell"]}
+    ]
+  }
+]

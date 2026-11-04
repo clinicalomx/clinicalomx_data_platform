@@ -1,0 +1,76 @@
+# Loki, single binary, filesystem store. Sized for one VM with a handful of containers and host
+# units, not for a cluster: no object store, no ring beyond a single in-memory member.
+#
+# Data lives on /mnt/data/artifacts, the 200 GB snapshotted volume, NOT /mnt/docker. That volume
+# is 50 GB and shared with Docker's data-root, so logs growing unbounded there would take Docker
+# down with them (ADR 0001 Decision 3 excludes it from backup for related reasons).
+
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+  # Nothing outside this Docker network talks to Loki: Grafana queries it by name and Alloy
+  # pushes to it. It is never published.
+  log_level: warn
+
+common:
+  path_prefix: /loki
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: 2024-01-01
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+limits_config:
+  # Loki's defaults (4 MB/s sustained, 6 MB burst) are sized for a multi-tenant cluster where a
+  # noisy tenant must not starve others. Here there is one tenant and the limit only throttles
+  # us, and exceeding it DROPS log lines rather than queueing them.
+  #
+  # It was hit on first start: the journal source backfills its max_age window and every
+  # container's history arrives at once, which is a legitimate burst rather than a runaway. The
+  # burst allowance is therefore raised well above the sustained rate, which is the shape of the
+  # actual traffic. A multi-line Python traceback from Prefect is a surprising amount of volume.
+  #
+  # If the rate error returns during NORMAL running rather than at startup, that is a real
+  # volume problem and the answer is to cut what is collected, not to raise this again.
+  ingestion_rate_mb: 16
+  ingestion_burst_size_mb: 32
+  # Per-stream limits bite separately: one chatty container can trip these while the tenant
+  # total is fine.
+  per_stream_rate_limit: 8MB
+  per_stream_rate_limit_burst: 24MB
+  # 30 days, chosen as the disk-versus-hindsight trade: long enough to investigate something
+  # noticed a fortnight late, short enough that the volume stays predictable.
+  retention_period: 720h
+  # A journal source replaying old entries on restart would otherwise be rejected outright.
+  reject_old_samples: true
+  reject_old_samples_max_age: 168h
+  volume_enabled: true
+
+compactor:
+  working_directory: /loki/compactor
+  # Retention is NOT applied unless the compactor is told to enforce it. Without this the
+  # retention_period above is decorative and the volume grows forever.
+  retention_enabled: true
+  delete_request_store: filesystem
+
+# No alertmanager wired up: rules are defined in Grafana, and delivery is deliberately not
+# configured yet (see docs/architecture/decisions/0006).
+ruler:
+  storage:
+    type: local
+    local:
+      directory: /loki/rules

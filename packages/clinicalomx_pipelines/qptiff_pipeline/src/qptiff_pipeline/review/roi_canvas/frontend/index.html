@@ -1,0 +1,76 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      html, body { margin: 0; padding: 0; font-family: ui-sans-serif, system-ui, sans-serif; }
+      #wrap { position: relative; display: inline-block; }
+      #toolbar { margin: 0 0 6px 0; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+      #toolbar button {
+        font: inherit; font-size: 12px; padding: 3px 9px; border-radius: 6px; cursor: pointer;
+        border: 1px solid #8888; background: #f5f5f5;
+      }
+      #toolbar button.active { background: #1f6feb; color: #fff; border-color: #1f6feb; }
+      #hint { font-size: 12px; color: #888; }
+      #mesh-wrap { font-size: 12px; color: #666; display: flex; gap: 3px; align-items: center; cursor: pointer; }
+      #toolbar2 {
+        margin: 0 0 6px 0; display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+        font-size: 12px; color: #555;
+      }
+      #toolbar2 .grp { display: flex; gap: 6px; align-items: center; }
+      #toolbar2 button {
+        font: inherit; font-size: 12px; padding: 2px 8px; border-radius: 6px; cursor: pointer;
+        border: 1px solid #8888; background: #f5f5f5;
+      }
+      #toolbar2 label { display: flex; gap: 4px; align-items: center; }
+      #toolbar2 input[type=range] { width: 96px; }
+      #zoom-label { min-width: 42px; text-align: center; font-variant-numeric: tabular-nums; }
+      #toolbar2 .tip { color: #999; }
+      /* Right-click context menu */
+      #ctx {
+        position: absolute; z-index: 1000; display: none; min-width: 150px;
+        background: #1e1e24; color: #eee; border: 1px solid #3a3a44; border-radius: 8px;
+        box-shadow: 0 6px 24px rgba(0,0,0,.35); padding: 4px; font-size: 13px; user-select: none;
+      }
+      #ctx .hdr { padding: 4px 10px; color: #9aa; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+      #ctx .item { padding: 6px 10px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+      #ctx .item:hover { background: #2d2d38; }
+      #ctx .sw { width: 11px; height: 11px; border-radius: 2px; display: inline-block; flex: none; }
+      #ctx .sep { height: 1px; background: #3a3a44; margin: 4px 6px; }
+      #ctx .del { color: #ff8080; }
+    </style>
+  </head>
+  <body>
+    <div id="toolbar">
+      <button id="mode-move" class="active" title="Select, move and resize boxes">Move / resize</button>
+      <button id="mode-add" title="Drag on the image to add a box">Add box</button>
+      <button id="mode-pan" title="Drag to pan the image (also: middle-mouse drag in any mode)">✋ Pan</button>
+      <button id="mode-link" title="Click two cores to declare them the same row (or column), a prior for the grid fit">🔗 Link</button>
+      <label id="mesh-wrap" title="Show the grid's own connectivity between adjacent cells">
+        <input id="show-mesh" type="checkbox" checked /> mesh
+      </label>
+      <span id="hint">Right-click a box to change its class · Del key removes the selected box</span>
+    </div>
+    <div id="toolbar2">
+      <span class="grp">
+        <button id="zoom-out" title="Zoom out">&minus;</button>
+        <span id="zoom-label">100%</span>
+        <button id="zoom-in" title="Zoom in">+</button>
+        <button id="zoom-reset" title="Reset zoom & pan">Fit</button>
+        <span class="tip">wheel = zoom · middle-drag = pan</span>
+      </span>
+      <span class="grp">
+        <label title="Brightness">☀ <input id="f-bright" type="range" min="-0.6" max="0.6" step="0.02" value="0" /></label>
+        <label title="Contrast">◐ <input id="f-contrast" type="range" min="-0.6" max="0.6" step="0.02" value="0" /></label>
+        <label title="Gamma (brightens shadows for dim slides)">γ <input id="f-gamma" type="range" min="0.3" max="2.5" step="0.05" value="1" /></label>
+        <button id="f-reset" title="Reset image adjustments">reset</button>
+      </span>
+    </div>
+    <div id="wrap">
+      <div id="canvas-holder"><canvas id="c"></canvas></div>
+      <div id="ctx"></div>
+    </div>
+    <script src="./fabric.min.js"></script>
+    <script src="./main.js"></script>
+  </body>
+</html>

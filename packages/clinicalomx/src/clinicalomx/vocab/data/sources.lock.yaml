@@ -1,0 +1,14 @@
+# Pinned public-ontology sources for the FOUNDATION - a lockfile.
+#
+# NEVER float to `latest-version`. bionty resolves a different parquet per version, and a
+# re-import that changes synonyms silently changes how free-text names resolve.
+#
+# Empty on purpose: the framework itself needs no ontology. A consumer that does declares
+# its own pin, which travels with the repo that depends on it:
+#
+#   VOCAB.source("Protein", source="uniprot", version="2024-03", organism="human")
+#
+# The UniProt pin previously here moved to clinicalomx_markers along with the imaging
+# marker registry.
+
+sources: {}

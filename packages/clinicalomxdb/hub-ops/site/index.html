@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>clinicalOMx DB operations</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #1a1a1a;
+      --muted: #5a5a5a;
+      --line: #d8d8d8;
+      --bar: #f4f4f4;
+      --active: #ffffff;
+      --accent: #2a5db0;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1c1c1e;
+        --fg: #e8e8e8;
+        --muted: #a0a0a0;
+        --line: #3a3a3c;
+        --bar: #252527;
+        --active: #1c1c1e;
+        --accent: #7aa5ec;
+      }
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      font-family: system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+    }
+    nav {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: stretch;
+      gap: 2px;
+      padding: 0 0.5rem;
+      background: var(--bar);
+      border-bottom: 1px solid var(--line);
+    }
+    nav button {
+      font: inherit;
+      font-size: 0.9rem;
+      color: var(--muted);
+      background: transparent;
+      border: 1px solid transparent;
+      border-bottom: none;
+      padding: 0.55rem 0.9rem;
+      cursor: pointer;
+      border-radius: 4px 4px 0 0;
+      margin-bottom: -1px;
+    }
+    nav button:hover { color: var(--fg); }
+    nav button[aria-selected="true"] {
+      color: var(--fg);
+      background: var(--active);
+      border-color: var(--line);
+      font-weight: 600;
+    }
+    nav .spacer { flex: 1 1 auto; }
+    nav .external {
+      align-self: center;
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-decoration: none;
+      padding: 0 0.5rem;
+    }
+    nav .external:hover { color: var(--accent); text-decoration: underline; }
+    main { flex: 1 1 auto; position: relative; overflow: hidden; }
+    .panel { position: absolute; inset: 0; }
+    .panel[hidden] { display: none; }
+    iframe { width: 100%; height: 100%; border: 0; display: block; }
+    .doc { overflow-y: auto; height: 100%; padding: 2rem; }
+    .doc-inner { max-width: 42rem; line-height: 1.6; }
+    h1 { font-size: 1.3rem; margin-top: 0; }
+    h2 { font-size: 1rem; margin-top: 2rem; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { text-align: left; padding: 0.4rem 0.8rem 0.4rem 0; border-bottom: 1px solid var(--line); }
+    code { background: var(--bar); padding: 0.1rem 0.3rem; }
+    p.note, .note { color: var(--muted); font-size: 0.9rem; }
+    /* Health tiles. Colour is paired with a text status everywhere it appears, so the
+       information is never carried by hue alone. */
+    .dot {
+      display: inline-block; width: 0.6rem; height: 0.6rem; border-radius: 50%;
+      background: var(--muted); vertical-align: middle;
+    }
+    .dot.ok { background: #2e7d32; }
+    .dot.warn { background: #b8860b; }
+    .dot.fail { background: #c62828; }
+    .dot.unknown { background: #8a8a8a; }
+    table.health th { font-weight: 600; white-space: nowrap; padding-right: 1rem; }
+    table.health td:first-child { width: 1.2rem; }
+    /* Health checks as disclosure widgets. <details> is used rather than a bespoke toggle so
+       clicking, keyboard operation and the expanded/collapsed state are all native. */
+    details.check { border-bottom: 1px solid var(--line); }
+    details.check > summary {
+      display: flex; align-items: baseline; gap: 0.6rem; padding: 0.45rem 0;
+      cursor: pointer; list-style: none;
+    }
+    details.check > summary::-webkit-details-marker { display: none; }
+    /* A disclosure triangle drawn in text, so it rotates without an image or icon font. */
+    details.check > summary::before {
+      content: '>'; font-family: ui-monospace, monospace; color: var(--muted);
+      transition: transform 0.12s ease; display: inline-block; width: 0.7rem;
+    }
+    details.check[open] > summary::before { transform: rotate(90deg); }
+    details.check > summary:hover .clabel { color: var(--accent); }
+    details.check .clabel { font-weight: 600; min-width: 11rem; }
+    details.check .csum { color: var(--muted); }
+    details.check .cbody { padding: 0 0 0.8rem 1.3rem; }
+    table.sub { font-size: 0.9rem; }
+    table.sub th { font-weight: 600; color: var(--muted); white-space: nowrap; padding-right: 1rem; }
+    table.sub td { padding-right: 1rem; white-space: nowrap; }
+    table.sub td:first-child { width: 1.2rem; padding-right: 0; }
+    table.sub tr.subhint td { white-space: normal; color: var(--muted); font-size: 0.85rem;
+      padding-top: 0; border-bottom: none; }
+    table.sub.kv th { text-align: left; width: 12rem; }
+    .hint { color: var(--muted); font-size: 0.85rem; margin-top: 0.2rem; }
+    .overall { margin: 0 0 0.8rem; }
+    .overall .dot { margin: 0 0.35rem 0 0.15rem; }
+    .fail { color: #c62828; }
+    /* Connection table + the login terminal it opens. */
+    table.conn td, table.conn th { padding-right: 1rem; vertical-align: middle; }
+    /* The health tiles put only a status dot in the first cell, so 1.2rem suits them. The
+       connection table puts the dot and the account name there, which that width wraps. */
+    table.conn td:first-child { width: auto; white-space: nowrap; }
+    tr.hintrow td { padding-top: 0; border-bottom: none; }
+    tr.hintrow + tr td { border-top: 1px solid var(--line); }
+    button.linkish {
+      font: inherit; color: var(--accent); background: none; border: none;
+      padding: 0; cursor: pointer; text-decoration: underline; white-space: nowrap;
+    }
+    button.primary {
+      font: inherit; padding: 0.45rem 0.9rem; cursor: pointer; border: 1px solid var(--line);
+      background: var(--bar); color: var(--fg); border-radius: 4px;
+    }
+    button.primary:hover { border-color: var(--accent); color: var(--accent); }
+    /* Login card. Deliberately plain: it is a credential prompt, so it should look like part of
+       this page rather than anything that could be mistaken for a system dialog. */
+    .card {
+      margin-top: 1rem; padding: 1rem 1.2rem; border: 1px solid var(--line);
+      border-radius: 6px; background: var(--bar);
+    }
+    .card[hidden] { display: none; }
+    .card h2 { margin-top: 0; }
+    .card label { display: block; font-size: 0.9rem; margin-bottom: 0.3rem; }
+    .card input {
+      font: inherit; padding: 0.4rem 0.5rem; margin-right: 0.5rem; min-width: 14rem;
+      border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--fg);
+    }
+    .card p.prompt { font-weight: 600; white-space: pre-wrap; margin-bottom: 0.5rem; }
+    .card .ok-msg { color: #2e7d32; font-weight: 600; }
+    pre.transcript {
+      margin-top: 1rem; padding: 0.6rem; max-height: 12rem; overflow: auto;
+      background: var(--bg); border: 1px solid var(--line); border-radius: 4px;
+      font-size: 0.8rem; white-space: pre-wrap; color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <nav id="tabs" role="tablist" aria-label="Services"></nav>
+  <main id="panels"></main>
+
+  <script>
+    // Each service is framed from this same origin, which is the whole reason path-based
+    // routing was chosen over a port per service: on separate ports every app would be a
+    // different origin and the SAMEORIGIN frame headers that MLflow and pgAdmin send by
+    // default would block embedding outright. No header rewriting is needed here.
+    const TABS = [
+      { id: 'status',  label: 'Status',   url: null },
+      { id: 'prefect', label: 'Prefect',  url: '/prefect/' },
+      { id: 'mlflow',  label: 'MLflow',   url: '/mlflow/' },
+      { id: 'review',  label: 'Review',   url: '/review/' },
+      // Beside Review because the two are the pair a researcher moves between: Review is the human
+      // gate that decides what the pipeline produces, Build is what any of it can be turned into.
+      // Its own service and its own image, not a panel inside Review, because it writes nothing.
+      { id: 'build',   label: 'Build',    url: '/build/' },
+      // Querying the instance through the lamindb API rather than SQL. pgAdmin stays on its own
+      // tab for the times raw SQL is what is wanted; this is for the times it is not.
+      { id: 'explore', label: 'Explore',  url: '/explore/' },
+      // Declared versus landed, rendered on this host by the ops-schema-review unit. It renders
+      // on demand and never on a schedule, so the page states when it was made; read that first.
+      { id: 'schema',  label: 'Schema',   url: '/schema-review/' },
+      { id: 'hpc',     label: 'HPC',      url: null },
+      // Lands on the Containers dashboard rather than Grafana's home, because that dashboard
+      // is what the removed Logs tab pointed at in spirit: every container, its processor and
+      // memory cost, and its log stream on one page. Grafana's own navigation inside the frame
+      // reaches Explore, alerting and everything else from there.
+      { id: 'grafana', label: 'Grafana',  url: '/grafana/d/clinicalomxdb-containers' },
+      { id: 'pgadmin', label: 'pgAdmin',  url: '/pgadmin/' },
+    ];
+
+    const nav = document.getElementById('tabs');
+    const panels = document.getElementById('panels');
+    const external = document.createElement('a');
+
+    function addTab(tab, before) {
+      const button = document.createElement('button');
+      button.textContent = tab.label;
+      button.id = 'tab-' + tab.id;
+      button.setAttribute('role', 'tab');
+      button.setAttribute('aria-selected', 'false');
+      button.setAttribute('aria-controls', 'panel-' + tab.id);
+      button.addEventListener('click', () => select(tab.id));
+      nav.insertBefore(button, before || null);
+      tab.button = button;
+
+      const panel = document.createElement('div');
+      panel.className = 'panel';
+      panel.id = 'panel-' + tab.id;
+      panel.hidden = true;
+      panel.setAttribute('role', 'tabpanel');
+      panels.appendChild(panel);
+      tab.panel = panel;
+      return tab;
+    }
+
+    TABS.forEach((tab) => addTab(tab));
+
+    const spacer = document.createElement('span');
+    spacer.className = 'spacer';
+    nav.appendChild(spacer);
+    external.className = 'external';
+    external.target = '_blank';
+    external.rel = 'noopener';
+    external.textContent = 'open separately';
+    nav.appendChild(external);
+
+    document.getElementById('panel-status').innerHTML = statusMarkup();
+    document.getElementById('panel-hpc').innerHTML = hpcMarkup();
+    initHealth();
+
+    function select(id) {
+      for (const tab of TABS) {
+        const on = tab.id === id;
+        tab.button.setAttribute('aria-selected', String(on));
+        tab.panel.hidden = !on;
+        // Lazy: the frame is created on first activation, so opening the portal does not
+        // start four apps polling at once. Once created it is kept, so switching back is
+        // instant and the review app's websocket survives.
+        if (on && tab.url && !tab.panel.firstChild) {
+          const frame = document.createElement('iframe');
+          frame.src = tab.url;
+          frame.title = tab.label;
+          tab.panel.appendChild(frame);
+        }
+      }
+      const active = TABS.find(t => t.id === id);
+      external.href = active.url || '/';
+      external.hidden = !active.url;
+      try { localStorage.setItem('ops-tab', id); } catch (e) { /* private mode */ }
+      if (location.hash.slice(1) !== id) history.replaceState(null, '', '#' + id);
+    }
+
+    // A frame's internal navigation never reaches the address bar, so only the tab itself
+    // is bookmarkable. Deep links into a run or an experiment need "open separately".
+    const known = new Set(TABS.map(t => t.id));
+    let initial = location.hash.slice(1);
+    if (!known.has(initial)) {
+      try { initial = localStorage.getItem('ops-tab') || 'status'; } catch (e) { initial = 'status'; }
+    }
+    select(known.has(initial) ? initial : 'status');
+    window.addEventListener('hashchange', () => {
+      const id = location.hash.slice(1);
+      if (known.has(id)) select(id);
+    });
+
+    // --- health tiles ---------------------------------------------------------
+    // Polls /health, which is served by the ops-health host systemd unit over a unix socket
+    // that Caddy proxies. The endpoint caches internally, so polling here is cheap; the
+    // interval is read back from its own response so the two cannot drift.
+    const CHECK_LABELS = {
+      connections: 'HPC connections',
+      systemd_units: 'Service units',
+      prefect: 'Prefect server and pools',
+      pg_backup: 'Postgres backup',
+      lamin: 'LaminDB instance',
+    };
+    let healthTimer = null;
+
+    async function refreshHealth() {
+      const box = document.getElementById('health');
+      if (!box) return;
+      try {
+        const resp = await fetch('/health', { cache: 'no-store' });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+        box.innerHTML = healthMarkup(data);
+        box.querySelectorAll('details.check').forEach((d) =>
+          d.addEventListener('toggle', () => expanded.set(d.dataset.check, d.open)));
+        renderConnections(data);
+        const seconds = Number(data.cache_seconds) || 15;
+        clearTimeout(healthTimer);
+        healthTimer = setTimeout(refreshHealth, seconds * 1000);
+      } catch (err) {
+        // A failure here means the endpoint is unreachable, which is a different fault from
+        // any single check failing, so say so rather than showing empty tiles.
+        box.innerHTML =
+          '<p class="fail">Health endpoint unreachable (' + String(err) + ').' +
+          ' On the VM: systemctl status ops-health</p>';
+        clearTimeout(healthTimer);
+        healthTimer = setTimeout(refreshHealth, 30000);
+      }
+    }
+
+    // The HPC panel: one row per connection, plus a login terminal opened on demand. Rows
+    // come from the health endpoint, which DISCOVERS sessions from the sockets on disk and
+    // unions them with the users declared in users.conf, so a connection added by logging in
+    // appears here without anything being declared first.
+    const CONN_COLUMNS = [
+      ['user', 'User'],
+      ['source', 'Source'],
+      ['session', 'SSH session'],
+      ['age', 'Age'],
+      ['worker', 'Worker'],
+      ['pool', 'Work pool'],
+      ['', ''],
+    ];
+
+    function renderConnections(data) {
+      const host = document.getElementById('connections');
+      if (!host) return;
+      // Distinguish three different situations that all used to read "no connection data",
+      // because only one of them is a normal state and the other two have a specific fix.
+      const conn = (data.checks || {}).connections;
+      if (!conn) {
+        // This page and the endpoint are versioned together but restart independently: the
+        // page is a bind-mounted file that a pull updates instantly, while the endpoint keeps
+        // the module it started with. So a pull without a restart lands exactly here.
+        host.innerHTML = '<p class="fail">The health endpoint is running an older version than'
+          + ' this page: it reports no <code>connections</code> check. On the VM run'
+          + ' <code>make ops-health</code>, or <code>sudo systemctl restart ops-health</code>.</p>';
+        return;
+      }
+      const rows = conn.detail;
+      if (!Array.isArray(rows)) {
+        host.innerHTML = '<p class="fail">Connections check failed: '
+          + esc(conn.summary || 'no detail returned') + '</p>';
+        return;
+      }
+      if (rows.length === 0) {
+        host.innerHTML = '<p class="note">No connections yet. Nothing is listed in'
+          + ' <code>users.conf</code> and no session has been established.</p>'
+          + '<p><button id="add-conn" class="primary">+ Add a connection</button>'
+          + '<span class="note"> opens the HPC login terminal</span></p>';
+        const first = document.getElementById('add-conn');
+        if (first) first.addEventListener('click', () => openLogin(''));
+        return;
+      }
+
+      const head = CONN_COLUMNS.map(([, label]) => '<th>' + esc(label) + '</th>').join('');
+      const body = rows.map((row) => {
+        const live = row.master_alive === true;
+        const dot = (ok, warn) => '<span class="dot ' + (ok ? 'ok' : (warn ? 'warn' : 'fail')) + '"></span>';
+        const age = row.established_age_hours == null ? '' : row.established_age_hours + 'h';
+        const worker = row.worker_active ? 'active'
+          : (row.worker_installed ? 'installed, not running' : 'not provisioned');
+        const pool = row.pool_present ? esc(row.pool_status || 'present') : 'not provisioned';
+        const action = live ? 'Re-authenticate' : 'Log in';
+        return '<tr>'
+          + '<td>' + dot(row.submit_ready === true, live) + ' <strong>' + esc(row.user) + '</strong></td>'
+          + '<td class="note">' + esc(row.source || '') + '</td>'
+          + '<td>' + (live ? 'live' : (row.socket_present ? 'stale socket' : 'none')) + '</td>'
+          + '<td class="note">' + esc(age) + '</td>'
+          + '<td class="note">' + esc(worker) + '</td>'
+          + '<td class="note">' + pool + '</td>'
+          + '<td><button class="linkish" data-login="' + esc(row.user) + '">' + action + '</button></td>'
+          + '</tr>'
+          + (row.hint ? '<tr class="hintrow"><td></td><td colspan="6" class="hint">' + esc(row.hint) + '</td></tr>' : '');
+      }).join('');
+
+      host.innerHTML = '<table class="health conn"><thead><tr>' + head + '</tr></thead><tbody>'
+        + body + '</tbody></table>'
+        + '<p><button id="add-conn" class="primary">+ Add a connection</button>'
+        + '<span class="note"> opens the HPC login terminal</span></p>';
+
+      host.querySelectorAll('[data-login]').forEach((b) =>
+        b.addEventListener('click', () => openLogin(b.getAttribute('data-login'))));
+      const add = document.getElementById('add-conn');
+      if (add) add.addEventListener('click', () => openLogin(''));
+    }
+
+    // --- login widgets -------------------------------------------------------
+    // Drives the /login/ relay, which runs real ssh on a pty and hands back each
+    // keyboard-interactive prompt as JSON. DUO decides how many prompts there are and what they
+    // say, so this renders whatever arrives rather than assuming a username-and-password pair.
+    // The relay reports whether a prompt is secret by reading the pty's echo flag, so the field
+    // type follows ssh rather than a guess from the prompt wording.
+    let login = null;        // { id, user, state, prompt, secret, message, transcript }
+    let loginPoll = null;
+
+    function openLogin(user) {
+      login = { state: 'idle', user: user || '', transcript: '', message: '' };
+      renderLogin();
+      const box = document.getElementById('login');
+      if (box) { box.hidden = false; box.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+      const field = document.getElementById('login-user');
+      if (field) field.focus();
+    }
+
+    function closeLogin() {
+      stopLoginPoll();
+      // Cancel server-side too, so a half-finished login does not leave an ssh child waiting.
+      if (login && login.id && ['prompt', 'waiting', 'starting'].includes(login.state)) {
+        fetch('/login/session/' + encodeURIComponent(login.id), { method: 'DELETE' }).catch(() => {});
+      }
+      login = null;
+      const box = document.getElementById('login');
+      if (box) { box.hidden = true; box.innerHTML = ''; }
+    }
+
+    function stopLoginPoll() { if (loginPoll) { clearTimeout(loginPoll); loginPoll = null; } }
+
+    async function startLogin() {
+      const field = document.getElementById('login-user');
+      const user = (field ? field.value : '').trim();
+      if (!user) return;
+      login = { state: 'starting', user, transcript: '', message: '' };
+      renderLogin();
+      try {
+        const resp = await fetch('/login/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user }),
+        });
+        const data = await resp.json();
+        if (!resp.ok) { login = { state: 'error', user, message: data.error || ('HTTP ' + resp.status) }; }
+        else { login = data; }
+      } catch (err) {
+        login = { state: 'error', user, message: String(err) };
+      }
+      renderLogin();
+      scheduleLoginPoll();
+    }
+
+    async function submitLogin() {
+      const field = document.getElementById('login-answer');
+      if (!login || !login.id || !field) return;
+      const value = field.value;
+      // Clear it from the DOM immediately: there is no reason for a passcode to sit in the page
+      // after it has been sent.
+      field.value = '';
+      login = Object.assign({}, login, { state: 'waiting', prompt: '' });
+      renderLogin();
+      try {
+        const resp = await fetch('/login/session/' + encodeURIComponent(login.id) + '/respond', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ response: value }),
+        });
+        const data = await resp.json();
+        login = resp.ok ? data : Object.assign({}, login, { state: 'error', message: data.error });
+      } catch (err) {
+        login = Object.assign({}, login, { state: 'error', message: String(err) });
+      }
+      renderLogin();
+      scheduleLoginPoll();
+    }
+
+    // Poll only while the relay owes us something. A DUO push can sit unanswered for a while, so
+    // "waiting" is a normal state to be in for a minute, not a stall.
+    function scheduleLoginPoll() {
+      stopLoginPoll();
+      if (!login || !login.id || !['starting', 'waiting'].includes(login.state)) {
+        if (login && login.state === 'done') refreshHealth();
+        return;
+      }
+      loginPoll = setTimeout(async () => {
+        try {
+          const resp = await fetch('/login/session/' + encodeURIComponent(login.id));
+          if (resp.ok) login = await resp.json();
+        } catch (err) { /* transient; the next tick retries */ }
+        renderLogin();
+        scheduleLoginPoll();
+      }, 1000);
+    }
+
+    function renderLogin() {
+      const box = document.getElementById('login');
+      if (!box || !login) return;
+      const t = login.transcript ? '<pre class="transcript">' + esc(login.transcript) + '</pre>' : '';
+      let body;
+
+      if (login.state === 'idle') {
+        body = '<label for="login-user">HPC account</label>'
+          + '<input id="login-user" type="text" autocapitalize="off" autocorrect="off"'
+          + ' spellcheck="false" value="' + esc(login.user) + '" placeholder="alice">'
+          + '<button id="login-start" class="primary">Continue</button>';
+      } else if (login.state === 'starting') {
+        body = '<p class="note">Connecting as ' + esc(login.user) + ' ...</p>';
+      } else if (login.state === 'prompt') {
+        // The prompt text is whatever ssh asked. For DUO that may be a passcode request or a
+        // numbered list of methods, so it is shown verbatim above the field.
+        body = '<p class="prompt">' + esc(login.prompt) + '</p>'
+          + '<input id="login-answer" type="' + (login.secret ? 'password' : 'text') + '"'
+          + ' autocapitalize="off" autocorrect="off" spellcheck="false"'
+          + (login.secret ? ' autocomplete="off"' : '') + '>'
+          + '<button id="login-submit" class="primary">Send</button>'
+          + (login.secret ? '<span class="note"> hidden as you type</span>' : '');
+      } else if (login.state === 'waiting') {
+        body = '<p class="note">Waiting for the HPC. If you chose a push, approve it on your device.</p>';
+      } else if (login.state === 'done') {
+        body = '<p class="ok-msg">' + esc(login.message || 'Connected.') + '</p>'
+          + '<button id="login-close" class="primary">Close</button>';
+      } else {
+        body = '<p class="fail">' + esc(login.message || 'Login failed.') + '</p>'
+          + '<button id="login-retry" class="primary">Try again</button>';
+      }
+
+      box.innerHTML = '<h2>HPC login</h2>' + body + t
+        + '<p class="note">Your password and second factor are sent to ssh and not stored. '
+        + 'If a prompt here looks wrong, <a href="/ssh/" target="_blank" rel="noopener">use the '
+        + 'terminal instead</a>.</p>'
+        + '<p><button id="login-cancel" class="linkish">Cancel</button></p>';
+
+      const on = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
+      on('login-start', startLogin);
+      on('login-submit', submitLogin);
+      on('login-close', closeLogin);
+      on('login-cancel', closeLogin);
+      on('login-retry', () => openLogin(login && login.user));
+
+      // Enter should submit, because this is a two-field-at-most form and reaching for the mouse
+      // between DUO prompts is friction that matters when a push is timing out.
+      const enter = (id, fn) => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); fn(); } });
+      };
+      enter('login-user', startLogin);
+      enter('login-answer', submitLogin);
+      const focus = document.getElementById('login-answer') || document.getElementById('login-user');
+      if (focus) focus.focus();
+    }
+
+    // Each check is a disclosure widget rather than a one-line summary. "6/6 units active" is
+    // the wrong altitude when what you need is which unit, which pool, which account, so the
+    // detail the endpoint already returns is rendered inline instead of being collapsed into a
+    // count and a couple of hints.
+    //
+    // Columns per check. Anything without a spec falls back to key/value, so a new check added
+    // to the endpoint still renders something useful before this list is updated.
+    const DETAIL_COLUMNS = {
+      systemd_units: [['unit', 'Unit'], ['active_state', 'State'], ['restarts', 'Restarts'],
+                      ['restarts_in_window', 'Recent'], ['active_for_seconds', 'Active for']],
+      prefect: [['name', 'Work pool'], ['type', 'Type'], ['pool_status', 'Status'],
+                ['paused', 'Paused']],
+      connections: [['user', 'Account'], ['source', 'Source'], ['master_alive', 'Session'],
+                    ['worker_active', 'Worker'], ['pool_status', 'Pool']],
+    };
+
+    // Which rows are open. A poll every 15s replaces this markup wholesale, so without this the
+    // row you just opened would snap shut under you. An explicit toggle is remembered; until
+    // then a failing check defaults to open, because that is the one you want to read.
+    const expanded = new Map();
+    const isExpanded = (key, status) =>
+      expanded.has(key) ? expanded.get(key) : status !== 'ok';
+
+    function humanSeconds(value) {
+      const n = Number(value);
+      if (!isFinite(n)) return String(value);
+      if (n < 60) return n + 's';
+      if (n < 3600) return Math.round(n / 60) + 'm';
+      if (n < 86400) return Math.round(n / 3600) + 'h';
+      return Math.round(n / 86400) + 'd';
+    }
+
+    // Booleans read as their domain meaning rather than true/false: a session is live or none,
+    // not "true".
+    function cellValue(prop, value) {
+      if (value === null || value === undefined || value === '') return '-';
+      if (prop === 'active_for_seconds') return humanSeconds(value);
+      if (prop === 'master_alive') return value ? 'live' : 'none';
+      if (prop === 'worker_active') return value ? 'active' : 'not running';
+      if (typeof value === 'boolean') return value ? 'yes' : 'no';
+      return String(value);
+    }
+
+    function detailMarkup(key, detail) {
+      if (Array.isArray(detail)) {
+        if (!detail.length) return '<p class="note">Nothing reported for this check.</p>';
+        const cols = DETAIL_COLUMNS[key]
+          || Object.keys(detail[0]).filter((k) => k !== 'status' && k !== 'hint')
+               .map((k) => [k, k.replace(/_/g, ' ')]);
+        const head = '<th></th>' + cols.map(([, l]) => '<th>' + esc(l) + '</th>').join('');
+        const rows = detail.map((item) => {
+          const dot = item.status
+            ? '<span class="dot ' + esc(item.status) + '"></span>' : '';
+          const tds = cols.map(([prop]) =>
+            '<td>' + esc(cellValue(prop, item[prop])) + '</td>').join('');
+          const extra = item.hint || item.note || item.error;
+          return '<tr><td>' + dot + '</td>' + tds + '</tr>'
+            + (extra ? '<tr class="subhint"><td></td><td colspan="' + cols.length + '">'
+                       + esc(extra) + '</td></tr>' : '');
+        }).join('');
+        return '<table class="sub"><thead><tr>' + head + '</tr></thead><tbody>'
+               + rows + '</tbody></table>';
+      }
+      if (detail && typeof detail === 'object') {
+        const rows = Object.entries(detail).map(([k, v]) =>
+          '<tr><th>' + esc(k.replace(/_/g, ' ')) + '</th><td>'
+          + esc(cellValue(k, v)) + '</td></tr>').join('');
+        return '<table class="sub kv"><tbody>' + rows + '</tbody></table>';
+      }
+      return '<p class="note">No detail returned.</p>';
+    }
+
+    function healthMarkup(data) {
+      const rows = Object.entries(data.checks || {}).map(([key, check]) => {
+        const label = CHECK_LABELS[key] || key;
+        const open = isExpanded(key, check.status) ? ' open' : '';
+        return '<details class="check" data-check="' + esc(key) + '"' + open + '>'
+          + '<summary><span class="dot ' + esc(check.status) + '"></span>'
+          + '<span class="clabel">' + esc(label) + '</span>'
+          + '<span class="csum">' + esc(check.summary || '') + '</span></summary>'
+          + '<div class="cbody">' + detailMarkup(key, check.detail) + '</div>'
+          + '</details>';
+      }).join('');
+      return '<p class="overall">Overall: <span class="dot ' + esc(data.status) + '"></span>'
+        + '<strong>' + esc(data.status) + '</strong>'
+        + '<span class="note"> as of ' + esc(data.generated_at || '') + '</span></p>'
+        + rows;
+    }
+
+    function esc(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (c) => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+      ));
+    }
+
+    function initHealth() { refreshHealth(); }
+
+    function hpcMarkup() {
+      return `
+        <div class="doc"><div class="doc-inner">
+          <h1>HPC connections</h1>
+          <p>
+            Submitting to the HPC needs a multiplexed SSH session that a human has authenticated
+            with the second factor, and a session belongs to exactly one HPC account. That
+            cannot be automated: a service account with key authentication is not available.
+            Each row below is one such session, together with the Prefect worker and work pool
+            that submit through it.
+          </p>
+          <p class="note">
+            Two different things have to be true for a row to be ready. The session must be
+            live, which any user can fix themselves by logging in here. And the account must be
+            provisioned for submission, meaning an ssh alias, a connection block, a work pool
+            and a worker, which is an operator step on the VM
+            (<code>users.conf</code> then <code>make hpc-users</code>). A row shows which of
+            the two is missing.
+          </p>
+          <div id="connections"><p class="note">Loading...</p></div>
+          <div id="login" class="card" hidden></div>
+          <p class="note">
+            Logging in drives a real ssh session on this host and relays each prompt it asks,
+            which is why the second factor appears here as whatever the HPC requested rather than a
+            fixed form. Responses are sent to ssh and not stored, and a passcode is redacted from
+            the transcript shown back. A session is kept for 96 hours of idle time, so in practice
+            this is once per rebuild.
+          </p>
+        </div></div>`;
+    }
+
+    function statusMarkup() {
+      return `
+        <div class="doc"><div class="doc-inner">
+          <h1>clinicalOMx DB operations</h1>
+          <p>
+            Control-plane VM services, served under one loopback origin through the operator
+            SSH tunnel. See docs/runbooks/operations-ui.md.
+          </p>
+          <h2>Health</h2>
+          <div id="health"><p class="note">Loading...</p></div>
+          <h2>Notes</h2>
+          <p class="note">
+            Tabs load on first use, then stay loaded. Navigation inside a tab does not change
+            the address bar, so to bookmark or share a specific run use
+            <em>open separately</em> in the tab bar.
+          </p>
+          <p class="note">
+            This page runs beside the stack it reports on, so it cannot tell you the host is
+            down: an unreachable portal is itself the signal. The out-of-band backup webhook
+            is the alert path that does not share fate. Host and container metrics are still
+            to come. HPC sessions are managed on the HPC tab.
+          </p>
+        </div></div>`;
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+[Unit]
+Description=ROI review/editor Streamlit app (general gate HITL, VM 127.0.0.1:8501)
+After=network-online.target
+Wants=network-online.target
+# Bound to localhost only (no auth) - reach it via an SSH tunnel:
+#   ssh -N -L 8501:localhost:8501 ubuntu@<vm>
+# Runs in the vm-process venv (streamlit + streamlit-drawable-canvas + lamindb 2.6.1);
+# worker.env supplies PREFECT_API_URL=http://localhost:4200/api + LAMIN_API_KEY.
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+Environment=HOME=/home/ubuntu
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/home/ubuntu/clinicalomxdb/hub-pipelines/prefect/worker.env
+WorkingDirectory=/home/ubuntu/clinicalomx_pipeline
+ExecStart=/home/ubuntu/clinicalomxdb/hub-pipelines/prefect/workers/vm-process/.venv/bin/python -m streamlit run \
+  src/qptiff_pipeline/review/app.py \
+  --server.port 8501 --server.address 127.0.0.1 --server.headless true
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

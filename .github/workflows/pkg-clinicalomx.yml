@@ -1,0 +1,42 @@
+# CI for packages/clinicalomx, run from the package root.
+name: pkg-clinicalomx
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/clinicalomx/**"
+      - ".github/workflows/pkg-clinicalomx.yml"
+  pull_request:
+    paths:
+      - "packages/clinicalomx/**"
+      - ".github/workflows/pkg-clinicalomx.yml"
+
+defaults:
+  run:
+    working-directory: packages/clinicalomx
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install with the vocab, extract and app extras
+        run: uv sync --extra vocab --extra extract --extra app
+
+      - name: Tests
+        run: uv run pytest -q
+
+      - name: Vocabulary reference is current
+        run: uv run python -m clinicalomx.vocab docs --check docs/reference.md
+
+      - name: Extract reference is current
+        run: uv run python -m clinicalomx.extract docs --check docs/extract-recipes.md
+
+      - name: Lint
+        run: uv run ruff check src tests scripts

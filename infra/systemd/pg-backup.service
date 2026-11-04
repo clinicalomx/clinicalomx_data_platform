@@ -1,0 +1,14 @@
+# Monorepo-release render; provenance in infra/systemd/README.md. Daily pg_dumpall to the
+# data-artifacts volume (ADR 0001), gated on the mount so it can never write to the root
+# disk. Kept OUT of Prefect deliberately so a backup never shares fate with the database
+# it protects.
+[Unit]
+Description=clinicalomxdb Postgres pg_dumpall backup
+Requires=docker.service
+After=docker.service
+RequiresMountsFor=/mnt/data/artifacts
+OnFailure=pg-backup-alert.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/clinicalomx_data_platform/current/packages/clinicalomxdb/hub-database/scripts/pg-backup.sh

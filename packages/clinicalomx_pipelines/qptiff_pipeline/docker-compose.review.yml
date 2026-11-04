@@ -1,0 +1,34 @@
+# ROI review app as a hub service, on the shared clinicalomxdb_net so it reaches
+# Postgres (clinicalomxdb_postgres) and the Prefect API (clinicalomxdb_prefect:4200).
+# Published to 127.0.0.1 only. There is no auth, so access is via SSH tunnel:
+#   ssh -N -L 8501:localhost:8501 ubuntu@<vm>
+services:
+  review-app:
+    # Recommended: build in CI, push to GHCR, and pull here (private git deps built once):
+    #   image: ${CLINICALOMX_SITE_IMAGE_REGISTRY}/clinicalomx-review-app:latest
+    # For now, build on the box (needs the package-index secrets at build - see Dockerfile.review):
+    build:
+      context: .
+      dockerfile: Dockerfile.review
+      secrets: [aws_access_key_id, aws_secret_access_key]
+    image: clinicalomx-review:local
+    container_name: clinicalomxdb_review
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8501:8501"        # localhost-only -> SSH tunnel; app has no auth
+    environment:
+      PREFECT_API_URL: http://clinicalomxdb_prefect:4200/api
+    env_file:
+      - review.env                    # LAMIN_API_KEY + lamindb instance connection
+    networks:
+      - clinicalomxdb_net
+
+secrets:
+  aws_access_key_id:
+    environment: AWS_ACCESS_KEY_ID
+  aws_secret_access_key:
+    environment: AWS_SECRET_ACCESS_KEY
+
+networks:
+  clinicalomxdb_net:
+    external: true

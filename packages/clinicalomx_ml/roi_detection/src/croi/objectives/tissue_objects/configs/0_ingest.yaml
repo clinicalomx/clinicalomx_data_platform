@@ -1,0 +1,18 @@
+data_dir: thumbnails
+
+inputs:
+  qptiffs:
+    query: artifacts # resolves to a queryset
+    suffix: .qptiff
+    exclude_key_contains: [dmso]  # drop DMSO controls
+
+outputs:
+  thumbnails:
+    key: clinical-roi/thumbnails              # the governed Collection of all thumbnails
+    key_template: "thumbnails/{stem}.png"     # per-artifact key (materialize output)
+    description: "Collection of qptiff thumbnails."
+
+parameters:
+  # force: true, regenerates pngs, does not retrieve existing
+  force: false
+

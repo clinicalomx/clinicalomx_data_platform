@@ -1,0 +1,82 @@
+[
+  {
+    "_comment": [
+      "What collect.sample() returns for one registry: a run_query payload with every in-scope",
+      "feature merged on as a column. Row a2 carries a cell_type outside the feature's permitted",
+      "values, row a3 an n_cells that is not a number, and row a5 a legitimately multi-valued",
+      "cell. Row a4 carries nothing, which is data rather than a defect. Row a6 is the pair of",
+      "cells nothing can judge: a permitted value that itself contains the join separator, next",
+      "to a multi-valued numeric cell. Both are correct and neither can be decomposed."
+    ],
+    "registry": "Artifact",
+    "columns": ["uid", "key", "cell_type", "n_cells", "bgnorm_attempts"],
+    "merged": ["cell_type", "n_cells", "bgnorm_attempts"],
+    "rows": [
+      ["a1QrTz00", "cohort1/slide01.ome.tiff", "T cell", "1200", "3"],
+      ["a2QrTz01", "cohort1/slide02.ome.tiff", "Tcell", "980", "1"],
+      ["a3QrTz02", "cohort1/slide03.ome.tiff", "B cell", "many", "2"],
+      ["a4QrTz03", "cohort1/slide04.ome.tiff", "", "", ""],
+      ["a5QrTz04", "cohort1/slide05.ome.tiff", "T cell, B cell", "441", "1"],
+      ["a6QrTz05", "cohort1/slide06.ome.tiff", "CD4-positive, alpha-beta T cell, Macrophage", "1200, 980", "1"]
+    ],
+    "count": 6,
+    "truncated": false,
+    "elapsed": 0.412,
+    "expression": "ln.Artifact.filter().order_by('-created_at')[:20].to_dataframe()",
+    "image_columns": [],
+    "images_omitted": 0,
+    "features_in_scope": [
+      {"name": "bgnorm_attempts", "dtype": "float", "values": ["1", "2", "3"]},
+      {"name": "cell_type", "dtype": "cat[ULabel]",
+       "values": ["B cell", "CD4-positive, alpha-beta T cell", "Macrophage", "T cell", "Tcell"]},
+      {"name": "n_cells", "dtype": "int", "values": ["1200", "441", "980", "many"]}
+    ]
+  },
+  {
+    "_comment": [
+      "roi_uid is free text, so both cells are judged and neither can be refused. annotations is",
+      "categorical with no permitted value landed against it, which is a thin declaration rather",
+      "than a bad row, so both of its cells go unjudged for a reason of their own."
+    ],
+    "registry": "Record",
+    "columns": ["uid", "name", "roi_uid", "annotations"],
+    "merged": ["roi_uid", "annotations"],
+    "rows": [
+      ["r1QrTz00", "P001", "ROI-0001", "thumbnails-v2"],
+      ["r2QrTz01", "P002", "ROI-0002", "thumbnails-v3"]
+    ],
+    "count": 2,
+    "truncated": false,
+    "elapsed": 0.09,
+    "expression": "ln.Record.filter().order_by('-created_at')[:20].to_dataframe()",
+    "image_columns": [],
+    "images_omitted": 0,
+    "features_in_scope": [
+      {"name": "annotations", "dtype": "cat[Collection]", "values": ["thumbnails-v2", "thumbnails-v3"]},
+      {"name": "roi_uid", "dtype": "str", "values": ["ROI-0001", "ROI-0002"]}
+    ]
+  },
+  {
+    "_comment": [
+      "A frame carrying no uid. lamin_api merges feature columns by uid, so _apply_merge returns",
+      "the frame unchanged and no feature column reaches it, while the payload still names the",
+      "feature it was asked to merge. Nothing here can be judged, and the panel has to say that",
+      "rather than report a clean result over a sample it never looked at."
+    ],
+    "registry": "Collection",
+    "columns": ["name", "description"],
+    "merged": ["cell_type"],
+    "rows": [
+      ["thumbnails", "Per-image YOLO label thumbnails."]
+    ],
+    "count": 1,
+    "truncated": false,
+    "elapsed": 0.031,
+    "expression": "ln.Collection.filter().order_by('-created_at')[:20].to_dataframe()",
+    "image_columns": [],
+    "images_omitted": 0,
+    "features_in_scope": [
+      {"name": "cell_type", "dtype": "cat[ULabel]", "values": ["B cell", "T cell"]}
+    ]
+  }
+]

@@ -1,0 +1,78 @@
+# site.example.yaml
+#
+# Everything that ties this platform to one deployment site. Copy this file to site.yaml in
+# the same directory, replace every <...> value, then check it:
+#
+#     uv run scripts/site/render.py --check site.yaml
+schema_version: 1
+
+hub:
+  # Public address of the control-plane VM. Compute jobs reach Prefect (4200), MLflow (5000)
+  # and Postgres (5432) here. Processes on the VM itself use localhost, because the cloud
+  # does not route a VM's floating address back to itself.
+  public_address: <203.0.113.10>
+  # The one source address allowed to reach 4200, 5000 and 5432: the HPC cluster's NAT.
+  # Ask the HPC support desk for it. Prefect and MLflow have no login of their own.
+  compute_ingress_cidr: <198.51.100.7/32>
+  # The portal address in an operator's browser, through `make tunnel`.
+  portal_url: <http://localhost:8080>
+
+lamin:
+  # LaminHub instance slug, owner/name. `lamin connect` asks LaminHub for the database.
+  instance: <owner/name>
+
+storage:
+  # These must equal the roots ALREADY registered as ln.Storage records in the instance.
+  # Changing a value here does not move any data. List the registered roots with:
+  #   python -c "import lamindb as ln; print(ln.Storage.to_dataframe(limit=None)[['root']])"
+  # Canonical HPC root that holds every derived artifact.
+  hpc_root: </scratch/project_mnt/S0000/dbstorage>
+  # A symlink alias of hpc_root that older records and flows use. Equal to hpc_root if none.
+  hpc_alias: </scratch/project/<project>/dbstorage>
+  # Read-only collection holding the raw scans. Governance folders are relative to it.
+  raw_root: </rdm/Q0000>
+  # Scratch collection on the same research data service.
+  raw_scratch_root: </rdm/Q0001>
+  # Storage root for detector labels, models and evaluations. Never a personal directory:
+  # a per-user scratch area is not backed up and disappears with that user's account.
+  model_root: </scratch/project_mnt/S0000/dbstorage/clinical_roi>
+  # Host paths bound into every compute container. Must contain every root above.
+  container_binds: [</scratch>, </rdm>]
+
+hpc:
+  # Login host the hub reaches over SSH to submit jobs.
+  login_host: <hpc-login.example.edu>
+  # SLURM account jobs are charged to. On the cluster:
+  #   sacctmgr -nP show assoc user=$USER format=account,partition,qos
+  slurm_account: <a_account>
+  # Partition and QoS used when a deployment names none. Use a QoS your account is granted.
+  default_partition: <general>
+  default_qos: <normal>
+  # Parent of each HPC user's own scratch directory, <this>/<user>. Per-user caches live there,
+  # such as the Apptainer cache of the croi training deployments.
+  user_scratch_root: </scratch/users>
+  # HPC users the hub submits as. The FIRST is the primary: every deployment runs as this
+  # person unless it names another pool. Each user needs their own HPC account on
+  # slurm_account and completes MFA at /login/ on the portal after every hub reboot.
+  users: [<username>]
+  # The one address every compute job reaches the internet as: the cluster's shared NAT. Ask the
+  # HPC support desk for it. hub.compute_ingress_cidr must contain it. The Grafana alert on the
+  # HPC API ports treats it as an expected source (docs/operations.md section 8).
+  nat_address: <198.51.100.7>
+  # The cluster's private compute subnet, as a CIDR. The same alert treats it as an expected
+  # source, for direct paths that bypass the NAT.
+  compute_subnet: <10.10.0.0/23>
+
+registry:
+  # Container registry namespace images are pushed to and pulled from.
+  images: <ghcr.io/your-org>
+
+packages:
+  # Private Python package index, or null when every first-party package is built from
+  # this repository (the default). An S3-backed index is read path-style, so its S3 endpoint
+  # is taken to be this URL's origin.
+  index_url: null
+
+source:
+  # owner/name of the repository deployments clone their flow code from at a release tag.
+  repository: <your-org/clinicalomx_data_platform>

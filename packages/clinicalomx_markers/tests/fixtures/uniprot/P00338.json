@@ -1,0 +1,379 @@
+{
+  "headers": {
+    "content-type": "application/json",
+    "x-uniprot-release": "2026_02",
+    "x-uniprot-release-date": "10-June-2026"
+  },
+  "body": {
+    "entryType": "UniProtKB reviewed (Swiss-Prot)",
+    "primaryAccession": "P00338",
+    "proteinDescription": {
+      "recommendedName": {
+        "fullName": {
+          "evidences": [
+            {
+              "evidenceCode": "ECO:0000305"
+            }
+          ],
+          "value": "L-lactate dehydrogenase A chain"
+        },
+        "shortNames": [
+          {
+            "value": "LDH-A"
+          }
+        ],
+        "ecNumbers": [
+          {
+            "evidences": [
+              {
+                "evidenceCode": "ECO:0000269",
+                "source": "PubMed",
+                "id": "11276087"
+              }
+            ],
+            "value": "1.1.1.27"
+          }
+        ]
+      },
+      "alternativeNames": [
+        {
+          "fullName": {
+            "value": "Cell proliferation-inducing gene 19 protein"
+          }
+        },
+        {
+          "fullName": {
+            "value": "LDH muscle subunit"
+          },
+          "shortNames": [
+            {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000303",
+                  "source": "PubMed",
+                  "id": "11276087"
+                }
+              ],
+              "value": "LDH-M"
+            }
+          ]
+        },
+        {
+          "fullName": {
+            "value": "Renal carcinoma antigen NY-REN-59"
+          }
+        }
+      ]
+    },
+    "genes": [
+      {
+        "geneName": {
+          "evidences": [
+            {
+              "evidenceCode": "ECO:0000312",
+              "source": "HGNC",
+              "id": "HGNC:6535"
+            }
+          ],
+          "value": "LDHA"
+        },
+        "orfNames": [
+          {
+            "value": "PIG19"
+          }
+        ]
+      }
+    ],
+    "comments": [
+      {
+        "texts": [
+          {
+            "evidences": [
+              {
+                "evidenceCode": "ECO:0000269",
+                "source": "PubMed",
+                "id": "11276087"
+              }
+            ],
+            "value": "Interconverts simultaneously and stereospecifically pyruvate and lactate with concomitant interconversion of NADH and NAD(+)"
+          }
+        ],
+        "commentType": "FUNCTION"
+      },
+      {
+        "commentType": "SUBCELLULAR LOCATION",
+        "subcellularLocations": [
+          {
+            "location": {
+              "value": "Cytoplasm",
+              "id": "SL-0086"
+            }
+          }
+        ]
+      }
+    ],
+    "uniProtKBCrossReferences": [
+      {
+        "database": "GO",
+        "id": "GO:0005829",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:cytosol"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:HPA"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0070062",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:extracellular exosome"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "HDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0007005",
+            "source": "PubMed",
+            "id": "11487543"
+          },
+          {
+            "evidenceCode": "ECO:0007005",
+            "source": "PubMed",
+            "id": "19056867"
+          },
+          {
+            "evidenceCode": "ECO:0007005",
+            "source": "PubMed",
+            "id": "20458337"
+          },
+          {
+            "evidenceCode": "ECO:0007005",
+            "source": "PubMed",
+            "id": "23533145"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0016020",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:membrane"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "HDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0007005",
+            "source": "PubMed",
+            "id": "19946888"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005739",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:mitochondrion"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IBA:GO_Central"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005634",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:nucleus"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "HDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0007005",
+            "source": "PubMed",
+            "id": "21630459"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0035686",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:sperm fibrous sheath"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:Ensembl"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0045296",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:cadherin binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "HDA:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0007005",
+            "source": "PubMed",
+            "id": "25468996"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0042802",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:identical protein binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IPI:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000353",
+            "source": "PubMed",
+            "id": "34381247"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0004459",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:L-lactate dehydrogenase (NAD+) activity"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IMP:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000315",
+            "source": "PubMed",
+            "id": "34381247"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0006096",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:glycolytic process"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "NAS:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000303",
+            "source": "PubMed",
+            "id": "1953713"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0006089",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:lactate metabolic process"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:ComplexPortal"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "24816116"
+          },
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "34381247"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0042867",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:pyruvate catabolic process"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IBA:GO_Central"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0021762",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:substantia nigra development"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "HEP:UniProtKB"
+          }
+        ]
+      }
+    ],
+    "extraAttributes": {
+      "uniParcId": "UPI000013C8AF"
+    }
+  }
+}

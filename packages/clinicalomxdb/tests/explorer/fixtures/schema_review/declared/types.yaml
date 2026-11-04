@@ -1,0 +1,20 @@
+# A real subset of the declared entity types, with the uids the declaration carried at ADR 0003.
+#
+# uid is a TRIPWIRE, never written back. Categorical features pin to a type's uid, so a uid that
+# changed means the type was deleted and recreated and every feature pinned to the old one is
+# dangling. Patient below is arranged to have been recreated in the paired landed.json.
+
+types:
+- name: Cohort
+  uid: CEL53rJWA2uHCGoQ
+  description: Study cohort grouping patients.
+- name: Patient
+  uid: TaXLKQSk53LXyQgR
+  description: An individual patient. Has clinical metadata/covariates. Central entity.
+- name: ROI
+  uid: 9QryVffwCZ424wYv
+  description: Region of interest. Base entity describing a spatial sampling unit.
+- name: Core
+  uid: vRO0q8g8x3h9u06B
+  type: ROI
+  description: Special instance of an ROI that describes a circular tissue core on a TMA.

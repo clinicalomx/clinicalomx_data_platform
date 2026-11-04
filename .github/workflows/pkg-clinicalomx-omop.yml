@@ -1,0 +1,47 @@
+# CI for packages/clinicalomx_omop
+name: pkg-clinicalomx-omop
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/clinicalomx_omop/**"
+      - "packages/clinicalomx_ledger/**"
+      - "packages/clinicalomx/**"
+      - ".github/workflows/pkg-clinicalomx-omop.yml"
+  pull_request:
+    paths:
+      - "packages/clinicalomx_omop/**"
+      - "packages/clinicalomx_ledger/**"
+      - "packages/clinicalomx/**"
+      - ".github/workflows/pkg-clinicalomx-omop.yml"
+
+defaults:
+  run:
+    working-directory: packages/clinicalomx_omop
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install
+        run: uv sync --locked --group pg
+
+      - name: Generated CDM module is current
+        run: uv run python scripts/generate_cdm.py --check
+
+      - name: Tests
+        run: uv run pytest -q
+
+      # A throwaway postgres:18 through the runner's docker; synthetic data only.
+      - name: Tests against Postgres
+        run: uv run pytest tests_pg -q
+
+      - name: Lint
+        run: uv run ruff check src tests tests_pg scripts --no-cache

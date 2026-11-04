@@ -1,0 +1,16 @@
+# Global project manifest config for this project.
+# The instance and the storage root are site values (site.yaml lamin.instance and
+# storage.model_root), expanded by croi.environment.InstanceManifest.
+instance: "${LAMIN_INSTANCE}"
+
+project:
+  project_name: "clinical-roi-general"
+  project_description: "ROI detection (tissue_section + whole-TMA) in QPTIFF thumbnails."
+
+storage:
+  storage_root: "${CLINICALOMX_SITE_MODEL_ROOT}"
+  region: hpc
+
+services:
+  mlflow:
+    uri_env: MLFLOW_TRACKING_URI

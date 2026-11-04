@@ -1,0 +1,40 @@
+# Storage locations, lifted out of database_connection/db/seed.py:seed_storage.
+#
+# These are SITE facts, not vocabulary, so each root is a ${NAME} site value: site.yaml at the
+# repository root sets it (storage.raw_root, storage.raw_scratch_root, storage.hpc_root) and
+# scripts/site/render.py writes it to site.env. dataio.storages() expands each one and refuses one
+# that is unset; the vocabulary hash and the generated reference read them as written, so neither
+# depends on the site. The `--default-storage` flag decides which becomes ln.settings.storage.
+#
+# THE BASE, NOT THE INVENTORY. Users register their own scratch roots and that is fine;
+# `audit` lists them as extras and never fails on them. What must hold is that everything
+# below exists.
+#
+# Roots are matched literally, so a symlink and its target are two different Storage
+# records over the same bytes. On the HPC the project's storage.hpc_alias is a symlink to its
+# storage.hpc_root, and BOTH are registered in the instance (the second by an earlier seed, the
+# first by this file before 2026-07-30). hpc_root is canonical: it is the real path, so it
+# survives the symlink being repointed, and it is what the other HPC-side storages already
+# use. The symlink form is left registered rather than removed - an ln.Storage with artifacts
+# cannot be deleted safely - but nothing new should target it.
+#
+# It is also the form that misbehaves off-HPC: the VM's compose bind-mounts
+# hub-storage/hpc_scratch at /scratch, so a /scratch/... root that exists there resolves to
+# the VM's own disk and lamindb selects it as local storage. Declaring hpc_root avoids
+# re-creating that path on every apply. See docs/vocabulary.md.
+
+storages:
+  - key: q6932
+    root: ${CLINICALOMX_SITE_RAW_ROOT}
+    host: qrisdata
+    description: Q6932 Collection for Raw Data
+
+  - key: q8998
+    root: ${CLINICALOMX_SITE_RAW_SCRATCH_ROOT}
+    host: qrisdata
+    description: Q8998 Collection for Scratch Data
+
+  - key: hpc_file
+    root: ${CLINICALOMX_SITE_HPC_ROOT}
+    host: hpc
+    description: Shared clinicalomx storage (canonical path; /scratch/project/clinicalomx symlinks here).

@@ -1,0 +1,53 @@
+[Unit]
+Description=clinicalOMx DB operations health endpoint (portal tiles)
+After=network-online.target
+Wants=network-online.target
+# Deliberately NOT Requires=docker.service. This endpoint reports on the stack, so it must
+# start and keep running when Docker is down; that is the one degree of independence a host
+# process buys over a container (ADR 0004 Decision 5). It still cannot report that the host
+# itself is down: see the module docstring and the runbook.
+
+# This file is a TEMPLATE, matching the three Prefect worker units. bootstrap.sh substitutes
+# @HEALTH_DIR@ / @RUN_USER@ / @RUN_HOME@ / @HPC_LOGIN_HOST@ and installs the result to
+# /etc/systemd/system, so it runs wherever the repo is checked out. Do not enable this file
+# directly.
+
+[Service]
+Type=simple
+User=@RUN_USER@
+Group=@RUN_USER@
+# HOME must be the account that owns the HPC ControlMaster sockets and ssh config, because
+# `ssh -O check` resolves the alias from ~/.ssh/config and the socket path from ~.
+Environment=HOME=@RUN_HOME@
+Environment=PYTHONUNBUFFERED=1
+# The login host each ControlMaster socket is named for: hpc.login_host in site.yaml.
+Environment=HEALTH_HPC_HOST=@HPC_LOGIN_HOST@
+# Stdlib only, so the system interpreter is enough: no venv, no pip, and nothing to install
+# at bootstrap time. See the module docstring for why that matters for a monitor.
+ExecStart=/usr/bin/python3 @HEALTH_DIR@/health_server.py
+
+# Serves over a unix socket in /run/ops-health rather than a TCP port, so there is no port
+# for anything but the portal to reach. Caddy bind-mounts this directory.
+# Preserve=yes matters: without it systemd removes the directory on stop, and the Caddy
+# container's bind mount would keep pointing at the deleted inode, so restarting this unit
+# would silently break the portal's tiles until Caddy was restarted too.
+RuntimeDirectory=ops-health
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=yes
+Restart=always
+RestartSec=5
+
+# Hardening is deliberately mild. The primary check runs `ssh -O check`, which CONNECTS to a
+# ControlMaster unix socket under $HOME, and connecting to a socket requires write permission
+# on its inode. ProtectHome=read-only or ProtectSystem=strict would put that behind a
+# read-only mount, and whether the kernel still permits the connect depends on which inode
+# types the read-only check covers. That is far too subtle a thing for this endpoint's most
+# important signal to rest on, so /home stays writable and the process instead relies on
+# running unprivileged as the worker account.
+ProtectSystem=full
+ProtectHome=no
+PrivateTmp=yes
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

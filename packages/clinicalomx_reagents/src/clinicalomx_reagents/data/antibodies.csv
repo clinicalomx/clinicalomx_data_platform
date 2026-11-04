@@ -1,0 +1,40 @@
+# CONJUGATED ANTIBODIES: the physical reagent, one row per catalogue number.
+#
+# The column contract is declared in ../spec.py, not here, and data/README.md is
+# generated from it. A renamed or missing column fails on read.
+#
+# catalogue_number is the key. The same clone bought twice with different barcodes is two
+# rows, because the barcode is what an acquisition records.
+#
+# target_label is the VENDOR's spelling, kept verbatim. canonical_name is what this lab calls
+# it. Those two columns are the raw material for alias claims, which is why the vendor string
+# is never silently corrected here.
+#
+# uniprot_isoform is the exact IsoId from the vendor datasheet, for a clone that binds one
+# isoform rather than the gene product: an anti-CD45RA clone binds P08575-8, not P08575. Its
+# parent accession must be a candidate of the marker's target claim, which only
+# clinicalomx_markers can read, so that is the check that rejects a row where it is not.
+# BLANK is the common case and means the clone is not isoform specific. Every row
+# below is blank because no datasheet has been read yet; a value is written only from one.
+#
+# bx_barcode pairs with the reporter carrying the SAME NUMBER: BX002 is revealed by RX002.
+# The pairing is derived, never stored. See barcodes.csv.
+#
+# akoya_id names Akoya's proprietary oligo product, and it identifies the antibody and its
+# reporter as ONE SET: ordering the antibody ships the matching reporter, the way a catalogue
+# number covers a kit. So the reporter row in barcodes.csv carries the SAME akoya_id, and
+# load rejects a set whose two sides disagree on the oligo number. NA is a valid value and
+# means a custom or in-house conjugation, which has no bundled reporter and is exempt.
+#
+# Which antibody ran with which reporter in a given panel is an observation, not a fact about
+# the reagent, so it lives in the instance and gets no file here.
+#
+# The rows below are illustrative until the real inventory is imported. The akoya_id values
+# in particular are placeholders, not Akoya part numbers.
+#
+# status: active | draft   (draft rows are validated on every run but never seeded)
+catalogue_number,vendor,target_label,canonical_name,uniprot_isoform,bx_barcode,akoya_id,status
+4350003,Akoya Biosciences,E-Cadherin,E-CADHERIN,,BX001,AKY-001,draft
+4350012,Akoya Biosciences,"Na,K-ATPase alpha 1",NAKATPASE,,BX002,AKY-002,draft
+4350021,Akoya Biosciences,Vimentin,VIMENTIN,,BX003,AKY-003,draft
+ab129095,Abcam,Citrate Synthase,CITRATE_SYNTHASE,,BX004,NA,draft

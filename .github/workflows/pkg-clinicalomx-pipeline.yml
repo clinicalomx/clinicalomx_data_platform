@@ -1,0 +1,123 @@
+# CI for packages/clinicalomx_pipelines.
+name: pkg-clinicalomx-pipeline
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/clinicalomx_pipelines/**"
+      - "packages/clinicalomx_ml/**"
+      - "packages/clinicalomx/**"
+      - ".github/workflows/pkg-clinicalomx-pipeline.yml"
+      # This package's suite binds the Build app's compiled api_url port to
+      # OPS_PORTAL_URL and asserts the build-app service sets no prefix or
+      # address knob, so a change to either file can break this package
+      # without touching it.
+      - "packages/clinicalomxdb/hub-ops/environment.example"
+      - "packages/clinicalomxdb/hub-pipelines/docker-compose.yml"
+  pull_request:
+    paths:
+      - "packages/clinicalomx_pipelines/**"
+      - "packages/clinicalomx_ml/**"
+      - "packages/clinicalomx/**"
+      - ".github/workflows/pkg-clinicalomx-pipeline.yml"
+      # This package's suite binds the Build app's compiled api_url port to
+      # OPS_PORTAL_URL and asserts the build-app service sets no prefix or
+      # address knob, so a change to either file can break this package
+      # without touching it.
+      - "packages/clinicalomxdb/hub-ops/environment.example"
+      - "packages/clinicalomxdb/hub-pipelines/docker-compose.yml"
+
+defaults:
+  run:
+    working-directory: packages/clinicalomx_pipelines
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      # Each extra is what a set of tests imports; without it they skip and the
+      # job is green for tests that never ran. bgnorm: the bgnorm streaming
+      # tests. review: streamlit for the review-app tests and geopandas for the
+      # ROI geometry tests. prefect, added for the last test run only: the tests
+      # that need the real orchestrator. None of the three reaches torch, CUDA,
+      # ultralytics, rfdetr or clinical-roi (`uv export --frozen` shows it).
+      - name: Install
+        id: install
+        run: uv sync --extra bgnorm --extra review
+
+      # THREE RUNS, because the suite cannot share one interpreter session:
+      #  - a review-app test module installs the dev FAKE prefect at import, and
+      #    that fake then shadows prefect for every flow test collected after it
+      #    (the review-app fake/real prefect collision), so those
+      #    modules, and test_build_app.py which does the same once reflex is
+      #    installed, run on their own;
+      #  - the flow tests are written against conftest's prefect STUB, which only
+      #    applies while real prefect is absent, so real prefect is installed
+      #    last and only for the modules that call a flow, so a test that
+      #    passes on the stub alone cannot hide a divergence. Those modules
+      #    also ran in the first pass and run again here. conftest gives the
+      #    session an empty PREFECT_HOME, so no machine state reaches it.
+      # -rs lists every skip with its reason; the summary step copies each run's
+      # skip, failure and count lines to the job summary even when one fails.
+      - name: Tests
+        run: |
+          set -o pipefail
+          uv run --extra bgnorm --extra review pytest -q -rs \
+            --ignore=qptiff_pipeline/tests/test_review_dev_harness.py \
+            --ignore=qptiff_pipeline/tests/test_review_triage_states.py \
+            --ignore=qptiff_pipeline/tests/test_roi_anchoring.py \
+            --ignore=qptiff_pipeline/tests/test_build_app.py \
+            | tee "$RUNNER_TEMP/pytest-main.out"
+
+      - name: Tests (review app)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          set -o pipefail
+          uv run --extra bgnorm --extra review pytest -q -rs \
+            qptiff_pipeline/tests/test_review_dev_harness.py \
+            qptiff_pipeline/tests/test_review_triage_states.py \
+            qptiff_pipeline/tests/test_roi_anchoring.py \
+            qptiff_pipeline/tests/test_build_app.py \
+            | tee "$RUNNER_TEMP/pytest-review.out"
+
+      - name: Tests (real prefect)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          set -o pipefail
+          uv run --extra bgnorm --extra review --extra prefect pytest -q -rs \
+            qptiff_pipeline/tests/test_extract_assemble.py \
+            qptiff_pipeline/tests/test_register_blocks.py \
+            qptiff_pipeline/tests/test_build_environments.py \
+            qptiff_pipeline/tests/test_reset_bgnorm.py \
+            | tee "$RUNNER_TEMP/pytest-prefect.out"
+
+      # A throwaway postgres:18 through the runner's docker, and a real lamindb over it: the flows
+      # whose correctness is WHICH rows they delete. testcontainers comes in through `--with`, so
+      # the lock does not change. qptiff_pipeline/tests_pg/conftest.py says
+      # why this is outside `tests/`.
+      - name: Tests (real lamindb)
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: |
+          set -o pipefail
+          uv run --extra bgnorm --extra review --extra prefect --with "testcontainers[postgres]>=4" \
+            pytest -q -rs qptiff_pipeline/tests_pg \
+            | tee "$RUNNER_TEMP/pytest-lamindb.out"
+
+      - name: Test summary
+        if: always()
+        run: |
+          for run in main review prefect lamindb; do
+            echo "### pytest: $run" >> "$GITHUB_STEP_SUMMARY"
+            grep -E '^(SKIPPED|FAILED|ERROR) |[0-9]+ (passed|failed|error)' "$RUNNER_TEMP/pytest-$run.out" >> "$GITHUB_STEP_SUMMARY" \
+              || echo "no pytest output" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      - name: Lint
+        run: uv run ruff check qptiff_pipeline/src qptiff_pipeline/tests qptiff_pipeline/tests_pg

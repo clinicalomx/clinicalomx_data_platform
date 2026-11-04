@@ -1,0 +1,90 @@
+# Publish clinicalomx_markers to the private index on its release tag. 
+# the tag namespace is <distribution>-v<version>. The
+name: release-clinicalomx-markers
+
+on:
+  push:
+    tags: ["clinicalomx_markers-v*"]
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: packages/clinicalomx_markers
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    env:
+      INDEX_BUCKET: ${{ vars.INDEX_BUCKET }}
+      UV_S3_ENDPOINT_URL: ${{ vars.UV_S3_ENDPOINT_URL }}
+      AWS_REGION: us-east-1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      # `uv version` reads the pyproject in the working directory, and this job has one, so
+      # it cannot walk up the way the croi member checks did before their existence test
+      # (release-clinical-roi.yml). The dunder copy is read with sed rather than by importing
+      # the package, so the check needs no install and no dependency resolution; an absent or
+      # renamed assignment yields an empty string and fails closed.
+      - name: Tag matches both declared versions
+        run: |
+          tagged="${GITHUB_REF_NAME#clinicalomx_markers-v}"
+          declared="$(uv version --short --color never)"
+          dunder="$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' src/clinicalomx_markers/__init__.py)"
+          fail=0
+          if [ "$declared" != "$tagged" ]; then
+            echo "pyproject.toml declares $declared, tag says $tagged" >&2
+            fail=1
+          fi
+          if [ "$dunder" != "$tagged" ]; then
+            echo "__init__.py declares '$dunder', tag says $tagged" >&2
+            fail=1
+          fi
+          exit "$fail"
+
+      # The lock is part of what the tag ships, and a version bump that forgets it leaves the
+      # tag's lock describing the previous release. No index credential: every private
+      # requirement in this project resolves through a path source next door.
+      - name: The lock matches the metadata
+        run: uv lock --check
+
+      # No index read credential, and that is a claim about the PACKAGE and not about builds
+      # in general. A build resolves `build-system.requires` rather than the dependency set,
+      # but it resolves that against every index the project declares, and an implicit extra
+      # index is consulted for every name. The private index signs its reads with SigV4, so an
+      # unauthenticated resolution there FAILS rather than falling back to PyPI: that is how
+      # the first clinicalomx_markers-v0.2.0 tag died, unable to fetch hatchling. What makes
+      # this step credential-free is `explicit = true` on the [[tool.uv.index]] entry in
+      # pyproject.toml, which is now the shape every package in this repo declaring that index
+      # uses. Dropping it puts the failure straight back.
+      - name: Build the sdist and the wheel
+        run: uv build
+
+      # --no-sources is the whole point: it drops the [tool.uv.sources] path entry that makes
+      # clinicalomx_ledger resolve next door in the monorepo, so the probe answers the only
+      # question that matters to a consumer, which is whether this wheel installs from the
+      # index and PyPI alone. --dry-run downloads nothing. Read credential, not publish.
+      - name: The built wheel resolves from the index
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.INDEX_READ_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.INDEX_READ_SECRET_ACCESS_KEY }}
+        run: |
+          uv venv /tmp/resolve-probe -q
+          VIRTUAL_ENV=/tmp/resolve-probe uv pip install --dry-run --no-sources \
+            --extra-index-url "${UV_S3_ENDPOINT_URL}${INDEX_BUCKET}/simple/" \
+            --preview-features s3-endpoint \
+            dist/*.whl
+
+      - name: Publish to the private index
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.INDEX_PUBLISH_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.INDEX_PUBLISH_SECRET_ACCESS_KEY }}
+        run: uv run --no-project --with boto3 python ../clinicalomx/scripts/publish_index.py dist/*

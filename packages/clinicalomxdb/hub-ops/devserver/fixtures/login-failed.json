@@ -1,0 +1,16 @@
+[
+  {
+    "state": "prompt",
+    "prompt": "Password:",
+    "secret": true,
+    "message": "",
+    "emits": "Password: "
+  },
+  {
+    "state": "failed",
+    "prompt": "",
+    "secret": false,
+    "message": "ssh exited without authenticating. Wrong password, an expired or declined second factor, or no access to this host.",
+    "emits": "\nPermission denied, please try again.\n"
+  }
+]

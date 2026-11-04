@@ -1,0 +1,36 @@
+# Monorepo-release render of the cloud-init-authored stack unit; provenance and the
+# derivation rule are in infra/systemd/README.md. Body comments are carried from
+# infra/control_plane/cloud_init.yaml.tftpl, which stays authoritative for why.
+[Unit]
+Description=clinicalOMx DB stack (Postgres + MLflow + Prefect + ops portal)
+Requires=docker.service
+After=docker.service network-online.target
+RequiresMountsFor=/mnt/data/postgres /mnt/data/artifacts /mnt/docker
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/clinicalomx_data_platform/current/packages/clinicalomxdb
+EnvironmentFile=/opt/clinicalomx_data_platform/current/site.env
+ExecStartPre=-/usr/bin/docker network create clinicalomxdb_net
+ExecStart=/usr/bin/docker compose -f hub-database/docker-compose.yml --env-file hub-database/.env up -d --remove-orphans
+ExecStart=-/usr/local/bin/lamin-connect.sh
+ExecStart=/usr/bin/docker compose -f hub-pipelines/docker-compose.yml --env-file hub-pipelines/.env up -d
+# Ops portal last: it only reverse-proxies the services above (docs/architecture/decisions/0004).
+#
+# NO leading '-' on any of the next three ExecStart lines. Compose defaults every key in the ops
+# stack, so a bad .env does not fail on its own: it brings Grafana up on admin/admin
+# behind a listener with no auth proxy (docs/architecture/decisions/0007). env-check.py names the offending
+# setting and is the same gate `make ops-up` applies. It sits here rather than in
+# ExecStartPre deliberately: systemd runs every ExecStartPre before any ExecStart, so
+# gating there would keep Postgres down over a Grafana password.
+ExecStart=/usr/bin/python3 /opt/clinicalomx_data_platform/current/packages/clinicalomxdb/hub-ops/env-check.py hub-ops
+# Grafana started without its rendered alert rules provisions none and says nothing.
+ExecStart=/usr/bin/python3 /opt/clinicalomx_data_platform/current/packages/clinicalomxdb/hub-ops/grafana/alerting/render.py
+ExecStart=/usr/bin/docker compose -f hub-ops/docker-compose.yml --env-file hub-ops/.env up -d
+ExecStop=/usr/bin/docker compose -f hub-ops/docker-compose.yml --env-file hub-ops/.env stop
+ExecStop=/usr/bin/docker compose -f hub-pipelines/docker-compose.yml --env-file hub-pipelines/.env stop
+ExecStop=/usr/bin/docker compose -f hub-database/docker-compose.yml --env-file hub-database/.env stop
+
+[Install]
+WantedBy=multi-user.target

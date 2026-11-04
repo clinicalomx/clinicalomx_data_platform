@@ -1,0 +1,58 @@
+data_dir: ml_experiments
+
+inputs:
+    train_split: { kind: collection, key: clinical-roi/general/splits/train }
+    val_split: { kind: collection, key: clinical-roi/general/splits/val }
+    test_split: { kind: collection, key: clinical-roi/general/splits/test }
+    categories: { kind: artifact, key: general_labels/notes.json }
+
+outputs:
+    model:
+        key: models/general/best.pt # stable key; lamindb cuts versions
+        description: "champion for general ROI detection"
+    metrics:
+        key: "eval/general/v{version}/{view}/metrics.json" # {version}=champion ver, {view}=test|all
+        description: "Eval metrics (recall + IoU) for the champion"
+    contact_sheet:
+        key: "eval/general/v{version}/{view}/worst_predictions.png"
+        description: "Worst-prediction contact sheet for the champion"
+
+parameters:
+    name: yolo26n_clinical_roi
+    ultralytics_model_name: yolo26n.pt # base checkpoint saved in base_models/, registered
+    mlflow_experiment_name: clinical-roi/general-train
+
+    resume: auto
+
+    # sync mlrun dir to remote tracking server every N epochs
+    mlflow_log_period: 25
+
+    train:
+        epochs: 150
+        imgsz: 640
+        batch: 16
+        patience: 30
+        workers: 4
+        seed: 42
+        save_period: -1 # also snapshot epoch{N}.pt every N epochs (-1 = only last.pt/best.pt each epoch)
+        # device: 0 # uncomment + set on HPC GPU nodes
+
+        # image augmentation
+        hsv_h: 0.0 # shouldnt expect weird colored images, can expect all inputs to be HE/mif-like
+        hsv_s: 0.0
+        hsv_v: 0.2
+        degrees: 5.0
+        translate: 0.1
+        scale: 0.3
+        fliplr: 0.5
+        flipud: 0.5
+        mosaic: 1.0
+        close_mosaic: 10 # turns off mosaic at epochs - this value
+
+    eval:
+        mlflow_experiment: clinical-roi/general-eval
+        split: test
+        co_occurrence: false
+        imgsz: 640
+        conf: 0.25
+        worst_n: 24

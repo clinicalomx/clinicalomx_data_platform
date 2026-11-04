@@ -1,0 +1,179 @@
+[project]
+name = "clinicalomx-pipeline"
+version = "0.1.0"
+description = "Human-gated serving pipeline orchestrating clinical_roi (ROI/core detection), bgnorm (background normalisation), and clinicalomx (the lamindb foundation layer)."
+readme = "README.md"
+# Copyright 2026 ClinicalOMXLab
+license = "Apache-2.0"
+requires-python = ">=3.11"
+dependencies = [
+    "clinicalomx>=0.1,<0.2",
+    # PINNED EXACTLY, and the same pin must hold in every environment that writes to the instance:
+    # this repo, containers/Dockerfile.bgnorm, the croi inference wheels (which build the SIFs the
+    # HPC stages run in), and clinicalomx itself.
+    #
+    # A floor is not enough. lamindb changes DATA-VISIBLE behaviour inside a minor range: 2.8.x
+    # derives `Artifact.suffix` through `CanonicalSuffix`, whose format set is MIME-based, so
+    # `.qptiff` now records as "" where older versions recorded ".qptiff". With `>=` per environment
+    # and no lockfile, each image resolved whatever was latest on its build day, leaving the
+    # instance holding both spellings and every `filter(suffix=".qptiff")` silently skipping half the
+    # rows. See registry_helpers.source_artifacts.
+    #
+    # The floor is also a hard requirement: a package BEHIND the instance's DB schema refuses to
+    # connect. So bumping is deliberate: move the instance and every pin below together, then
+    # rebuild the SIFs and the review image.
+    "lamindb==2.8.1", # == the instance DB schema
+    "pydantic>=2.12",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+# Prefect orchestration layer (deployments + Automations) and the gate-event emitter.
+prefect = ["prefect>=3.0", "clinicalomx[prefect]"]
+# Compute libs the detection / bgnorm stages import AT RUN TIME. On the HPC these are
+# baked into the croi SIF, so they are OPTIONAL for the VM control-plane install
+# (mint-slides, gate, review app).
+# bgnorm is gated on 3.12: EVERY bgnorm tag declares requires-python >=3.12 while this repo, the
+# framework, croi and the vm-process worker are all >=3.11. Without the marker the two constraints
+# are irreconcilable and `uv lock` fails outright, which is what left this repo with no lockfile.
+#
+# Omitting bgnorm on 3.11 is safe because the extra is not how the bgnorm stage gets it: that stage
+# runs inside the bgnorm SIF (built FROM ghcr.io/bhuvalab/bgnormpy, python 3.12) where it is already
+# baked in. The extra exists for local and compute-node installs. Raising this repo to >=3.12 would
+# be the tidier answer, but it has to move with the review image, the worker and the SIFs.
+compute = ["clinical-roi", "bgnorm[mlflow]; python_version >= '3.12'"]
+# What the bgnorm streaming tests import, without the detector stack clinical-roi brings (torch,
+# CUDA, ultralytics, rfdetr). CI installs this one; nothing deploys it.
+bgnorm = ["bgnorm[mlflow]; python_version >= '3.12'", "xarray", "zarr", "dask"]
+# The LIGHT HPC stages: read the database, read a qptiff, nothing else. Deliberately excludes the
+# geo stack, torch and ultralytics - 14 of the 19 hpc-ssh-pool deployments need none of them, and
+# were paying for the ~6GB croi image to get lamindb and bioio.
+#
+# This extra is what a LOCAL checkout installs to work on those flows. The image
+# (containers/Dockerfile.qptiff) pins the same set EXACTLY, because its tag is what the HPC SIF path
+# is derived from - see that file. Ranges here, exact pins there, on purpose.
+qptiff = ["bioio", "bioio-qptiff", "tifffile", "pillow", "numpy>=1.26"]
+# The HITL ROI review Streamlit app (control-plane; no DL/compute libs, as clinical_roi is
+# imported lazily). Used by the review-app Docker image. The dearray grid fit runs HERE and is
+# pure geometry, so it needs numpy/scipy/geopandas/shapely/pandas (via the vendored
+# review.tma_gridding), but NOT ultralytics/bioio/spatialdata.
+review = [
+    # Floor set by the stage selector (review.stage_nav): width="stretch" on buttons.
+    "streamlit>=1.50",
+    # NOTE: no clinicalomx[app] here any more. This extra carried a >=0.3.1 floor for the Extract
+    # Explorer panel; the Explorer is now its own app and its own image, so the floor moved with it
+    # to the `build` extra below. This app imports only `clinicalomx.newest_artifact` and
+    # `clinicalomx.governance`, both of which the base range covers.
+    "streamlit-drawable-canvas",
+    "streamlit-sortables",  # drag-drop triage board (queue TMAs for bgnorm vs H&E)
+    "mlflow-skinny",  # client-only: query bgnorm experiments server-side for inline inspection
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "geopandas>=1.1",
+    "shapely>=2.0",
+    "pandas>=2.0",
+]
+# The Build app (qptiff_pipeline/build_app.py, containers: qptiff_pipeline/Dockerfile.build): the
+# Extract Explorer served as its own control-plane service. ONE line, and every word of it is
+# load-bearing.
+#
+# `clinicalomx[app]` is reflex plus the extract layer, which is the whole app. The BUILDERS
+# (clinicalomx[extract], the scverse and geo format stack) are deliberately
+# absent: this is the control plane, it cannot read HPC bytes, so the app plans and does not
+# assemble, and the Explorer says so itself, naming the missing extra.
+#
+# PREFECT IS NEW HERE, and it is the control plane's client, not an orchestration layer: this app
+# creates a flow run and lists flow runs, nothing more. It is named directly rather than taken
+# through this package's `prefect` extra, which also drags `clinicalomx[prefect]`'s gate-event
+# emitter that the Build app has no use for.
+build = ["clinicalomx[app]>=0.1,<0.2", "prefect>=3.0"]
+
+# Advertise this repo's vocabulary so `python -m clinicalomx.vocab audit` attributes its names to
+# `clinicalomx-pipeline` rather than reporting them as `(unowned)`, the signal that a feature was
+# minted by accident rather than declared by anyone. `apply --with-consumers` also reconciles it.
+[project.entry-points."clinicalomx.vocabulary"]
+clinicalomx-pipeline = "qptiff_pipeline.domain.vocab:VOCAB"
+
+# This repo's data invariants, so `python -m clinicalomx.checks run` covers the whole instance
+# rather than only the framework's own promises. The framework contributes the ROI invariants; these
+# depend on THIS pipeline's stage semantics (S, the key layout, bgnorm's QC shape).
+[project.entry-points."clinicalomx.checks"]
+clinicalomx-pipeline = "qptiff_pipeline.checks.pipeline:pipeline_checks"
+
+# The governance VALUES for this instance. The framework owns the Policy type and resolution; the
+# folder table describes which approvals cover which drop-box here, so it stays with the consumer
+# that knows them.
+[project.entry-points."clinicalomx.governance"]
+clinicalomx-pipeline = "qptiff_pipeline.domain.governance:POLICIES"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["qptiff_pipeline/src/qptiff_pipeline"]
+
+[tool.uv]
+# bgnorm v0.1.2 declares scipy>=1.17.1 while lamindb==2.8.1 requires scipy<1.17.0, so the two are
+# irreconcilable and no lockfile can exist while both are declared. bgnorm's floor is incidental
+# (its dependencies were pinned to whatever was current during development, not to a feature it uses),
+# and lamindb's ceiling is the one that must hold, because a package behind the instance's DB schema
+# refuses to connect at all.
+#
+# An OVERRIDE rather than a constraint: a constraint can only narrow a range, and this has to
+# contradict one. It also makes explicit what the bgnorm image already does by accident: it installs
+# lamindb 2.8.1 over the bgnorm base, so scipy is decided by whichever install ran last, and its
+# smoke test checks the lamindb version but not scipy. Declared here, that is at least visible.
+#
+# Revisit if bgnorm ever needs a scipy 1.17 feature for real: then lamindb must move first.
+override-dependencies = ["scipy<1.17.0"]
+
+[tool.uv.sources]
+clinicalomx = { path = "../clinicalomx" }
+clinical-roi = { path = "../clinicalomx_ml", editable = true }
+# The bgnorm science stack. Named by the `compute` extra but previously given no source at all, so
+# uv had nowhere to fetch it. And because `uv sync` resolves EVERY extra to build its lock, that one
+# unresolvable name failed the whole command (which is why this repo has no uv.lock, and why
+# Dockerfile.review uses `uv pip install ".[review,prefect]"` to select extras instead).
+#
+# Pinned to the tag the bgnorm stage actually runs against: containers/Dockerfile.bgnorm builds
+# FROM ghcr.io/bhuvalab/bgnormpy:v0.1.2, so the wheel and the image agree. Deliberately NOT a path
+# source: the local checkout sits at v0.1.1 plus four commits, i.e. neither released tag, and
+# installing that while the image runs v0.1.2 is the same drift that split `.qptiff` across lamindb
+# versions. The repo is public, so this git source needs no credential at all; the token the
+# Dockerfiles supply via `git config url.insteadOf` is for the private clinicalomx clone.
+bgnorm = { git = "https://github.com/BhuvaLab/bgnormPy.git", tag = "v0.1.2" }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    # coverage is how the untested SHAPE of this repo stays visible: the flows sit at 16-31%
+    # because they need the SIF libs, so a headline percentage is meaningless and the per-module
+    # numbers are the point. No threshold gate for that reason.
+    "pytest-cov>=5.0",
+    "ruff>=0.6",
+]
+
+[tool.ruff]
+line-length = 100
+src = ["qptiff_pipeline/src", "qptiff_pipeline/tests"]
+
+# Rules silenced where they describe the DESIGN rather than a defect. Scoped per directory rather
+# than globally, so the same rule still fires in the pure modules (contexts, keys, roi_io,
+# registry_helpers) where swallowing an exception really would hide a bug.
+#
+# BLE001 (`except Exception`): the flows are batch/recovery code: one corrupt slide must not kill a
+#   run of hundreds, so the house pattern is catch -> log -> mark the unit failed -> continue. The
+#   review app is a Streamlit UI, where a caught exception becomes an on-screen error instead of a
+#   dead session. Both are deliberate and every site logs.
+# S112 (`continue` in `except`): the same batch-resilience pattern, seen from the loop side.
+[tool.ruff.lint.per-file-ignores]
+"qptiff_pipeline/src/qptiff_pipeline/flows/*.py" = ["BLE001", "S112"]
+"qptiff_pipeline/src/qptiff_pipeline/review/*.py" = ["BLE001"]
+"qptiff_pipeline/src/qptiff_pipeline/review/dev/*.py" = ["BLE001"]
+# Test doubles: a shared mutable class attribute is deliberate in a stub (e.g. an intern table, or a
+# fake DataFrame's `attrs`), and annotating every one with ClassVar adds noise without adding safety.
+"qptiff_pipeline/tests/*.py" = ["RUF012"]
+
+[tool.pytest.ini_options]
+testpaths = ["qptiff_pipeline/tests"]

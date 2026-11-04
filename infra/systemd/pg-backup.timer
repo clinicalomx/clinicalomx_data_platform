@@ -1,0 +1,12 @@
+# Monorepo-release render; provenance in infra/systemd/README.md. Identical to the
+# cloud-init-authored timer (no paths to move); tracked so the whole backup unit set
+# installs from one place.
+[Unit]
+Description=Daily clinicalomxdb Postgres backup
+
+[Timer]
+OnCalendar=*-*-* 02:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

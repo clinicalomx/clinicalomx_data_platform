@@ -1,0 +1,98 @@
+# The Build app: clinicalomx's Extract Explorer, served as its own control-plane service.
+#
+# MULTI-STAGE, AND THAT IS THE WHOLE DIFFERENCE from Dockerfile.review beside it. The Explorer is
+# a Reflex app: its screen is Python, but what a browser loads is a JavaScript bundle compiled
+# from that Python, and compiling it needs Node. `reflex run --env prod` would do the compile at
+# container START - it is the same one-port arrangement this image serves - but that puts the Node
+# toolchain in the runtime image and spends half a minute on every `docker compose up`. So the
+# bundle is built once, here, and the runtime stage carries neither Node nor the compiler.
+#
+# Read Dockerfile.review's header first: every note there about the wheel and the venv applies
+# to the builder stage unchanged.
+#
+# THREE THINGS THIS IMAGE HAS THAT THE REVIEW IMAGE DOES NOT.
+#
+# 1. `.[build]`, not `.[review,prefect]`. The Explorer is reflex plus the extract layer, so the
+#    review UI's canvas, sortables, mlflow client and geometry stack are all absent.
+# 2. It installs THIS package anyway, which is the part that looks redundant and is not. The
+#    Explorer reports what a key may be used for, `clinicalomx.governance` answers that from the
+#    `clinicalomx.governance` entry point, and an entry point comes from INSTALLED distribution
+#    metadata. This repo is the only declaration of the `clinicalomx-qptiff-pipeline` folder, so an
+#    image holding `clinicalomx` alone resolves every bgnormed core to UNDECLARED and reports
+#    `denied` for bytes that are present and readable. Installing the distribution is what makes
+#    the entry point resolve; nothing here imports a flow.
+# 3. `graphviz`, the SYSTEM package. `extract/app/diagram.py` emits DOT and `web/dot.py` shells out
+#    to `dot -Tsvg` to draw it. Streamlit rendered DOT in the browser, which is why this was never
+#    needed before and why it is not a Python dependency now. Without the binary the two diagram
+#    panels print their DOT source and say why, which is legible and is not what a portal should
+#    show.
+#
+# Build CONTEXT is the package root (packages/clinicalomx_pipelines), where pyproject.toml,
+# rxconfig.py and .dockerignore live; this file sits one level down in qptiff_pipeline/:
+#   uv build --wheel --out-dir dist ../clinicalomx
+#   docker build -f qptiff_pipeline/Dockerfile.build -t clinicalomx-build .
+
+# ---------------------------------------------------------------------------------------
+# builder: resolve the wheels, then compile the frontend bundle from the installed app
+# ---------------------------------------------------------------------------------------
+FROM python:3.11-slim AS builder
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+# `unzip` and `curl` are for reflex's own bun download; `git` is for uv, as in the review image.
+RUN apt-get update && apt-get install -y --no-install-recommends git curl unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY . /app
+
+# `uv pip install`, NOT `uv sync`, for the same reason Dockerfile.review gives: sync builds a
+# UNIVERSAL lock resolving every extra, `compute` included, whose path sources are absent here.
+# First-party code is a wheel built from this checkout into dist/ by the image workflow, and
+# --no-sources drops the monorepo path source this context cannot reach. A `name @ file://`
+# requirement cannot be satisfied by any index, so no published clinicalomx can be selected.
+COPY dist /src/dist
+RUN --mount=type=cache,target=/root/.cache/uv \
+    set -eu; whl=$(echo /src/dist/clinicalomx-*.whl); [ -f "$whl" ]; \
+    uv venv /app/.venv; \
+    VIRTUAL_ENV=/app/.venv uv pip install --no-sources ".[build]" "clinicalomx[app] @ file://$whl"
+
+# The bundle. `rxconfig.py` in this directory names the app module and the `/build` prefix, and the
+# prefix is compiled INTO the bundle - every asset URL and the websocket address are literals in
+# it - which is why it is decided here and not by a compose environment variable the way
+# Streamlit's was. `--frontend-only` because the backend is this image; `--no-zip` because the
+# next stage copies the directory.
+#
+# It imports `qptiff_pipeline.build_app`, so anything that breaks the page breaks the BUILD rather
+# than the first request. That is the point of doing it here.
+RUN /app/.venv/bin/reflex export --frontend-only --no-zip --env prod --loglevel info
+
+# ---------------------------------------------------------------------------------------
+# runtime: the venv, the app, the compiled bundle, and `dot`. No Node, no compiler.
+# ---------------------------------------------------------------------------------------
+FROM python:3.11-slim
+
+# `graphviz` gives `dot`, which renders the two blueprint diagrams. See note 3 in the header.
+RUN apt-get update && apt-get install -y --no-install-recommends graphviz \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY --from=builder /app/.venv /app/.venv
+COPY --from=builder /app/rxconfig.py /app/rxconfig.py
+# ONLY `.web/build`. The rest of `.web` is node_modules and Vite scratch, hundreds of megabytes
+# that the served app never opens: `reflex.utils.exec.get_frontend_mount` reads exactly
+# `.web/build/client/<prefix>` and nothing else.
+COPY --from=builder /app/.web/build /app/.web/build
+
+# 8601, the port run_extract_app.sh uses locally, so one Explorer answers on one number wherever
+# it runs. It is also free on the VM: /explore/ is a different app on 8600.
+EXPOSE 8601
+
+# ONE process on ONE port: `build_serve` sets the three flags `reflex run --env prod` sets and
+# hands granian the ASGI app, with the compiled bundle mounted into it. Bind 0.0.0.0 INSIDE the
+# container; the host only publishes to 127.0.0.1 (see compose), so it stays SSH-tunnel-only (the
+# app has no auth). lamindb connection is NOT bootstrapped here - the host runs `lamin connect`
+# once and the container bind-mounts the host ~/.lamin.
+CMD ["/app/.venv/bin/granian", "--interface", "asgi", \
+     "--host", "0.0.0.0", "--port", "8601", \
+     "qptiff_pipeline.build_serve:asgi"]

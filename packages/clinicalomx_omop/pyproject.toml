@@ -1,0 +1,49 @@
+[project]
+name = "clinicalomx_omop"
+version = "0.1.0"
+description = "Patient metadata for the clinicalOMx instance as the OMOP CDM: record types generated from the OHDSI specification, the user's own ATHENA vocabulary, and the ROI-to-patient link."
+readme = "README.md"
+# Copyright 2026 ClinicalOMXLab
+license = "Apache-2.0"
+requires-python = ">=3.11"
+dependencies = [
+    # `link.py` imports `clinicalomx.names` directly.
+    "clinicalomx>=0.1,<0.2",
+    # The patient assignment is a ledger claim (ROI-to-Patient decision record, item 1), and
+    # its projection moves through `clinicalomx.review`, which the `store` extra carries.
+    "clinicalomx_ledger[store]>=0.1,<0.2",
+    # `link.training_frame` returns a DataFrame. lamindb pulls it in; declared because it is
+    # imported here.
+    "pandas>=2",
+]
+
+[tool.uv.sources]
+clinicalomx = { path = "../clinicalomx" }
+clinicalomx_ledger = { path = "../clinicalomx_ledger" }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/clinicalomx_omop"]
+
+[dependency-groups]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+# The lamindb suite in `tests_pg/`: a throwaway postgres:18 per session. Outside `testpaths`,
+# so `uv run pytest` stays databaseless; run with `uv run --group pg pytest tests_pg`.
+pg = ["testcontainers[postgres]>=4", "psycopg2-binary>=2.9"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests", "tests_pg", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "C4", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+# Generated from the specification; its lines are the spec's own text.
+"src/clinicalomx_omop/cdm/v5_4.py" = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

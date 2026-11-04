@@ -1,0 +1,10 @@
+# An ATHENA download is licensed terminology content (README.md names it) and must never be
+# committed. Keep it outside the repository and point CLINICALOMX_ATHENA_DIR at it; these catch
+# one unzipped here by mistake.
+CONCEPT*.csv
+VOCABULARY.csv
+DOMAIN.csv
+RELATIONSHIP.csv
+DRUG_STRENGTH.csv
+SOURCE_TO_CONCEPT_MAP.csv
+*.zip

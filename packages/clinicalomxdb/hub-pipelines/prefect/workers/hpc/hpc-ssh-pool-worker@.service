@@ -1,0 +1,47 @@
+[Unit]
+Description=Prefect hpc-slurm-ssh-pusher worker for %i (pool hpc-ssh-pool-%i)
+After=docker.service network-online.target
+Wants=network-online.target
+# TEMPLATED unit: %i is the HPC username. One instance per user in users.conf, installed by
+# bootstrap-users.sh. Start with: systemctl enable --now hpc-ssh-pool-worker@alice
+#
+# Each instance polls that user's own work pool and submits through that user's own SSH
+# connection block, so a deployment selects whose HPC allocation it runs under by selecting
+# its work pool. worker.py needs no change for this: it already reads the block name from
+# HPC_SSH_BLOCK (see its ssh_block_name default).
+#
+# The worker starts and polls happily without a live ControlMaster socket; only submission
+# needs one. A user establishes theirs by completing DUO once at /ssh/%i/ on the operator
+# portal, after which ControlPersist keeps it for 96h of idle time. The ops health endpoint
+# reports which sockets are alive, because a running worker with a dead socket looks healthy
+# and fails every submission.
+#
+# This file is a TEMPLATE in two senses. bootstrap-users.sh substitutes @PREFECT_DIR@ /
+# @SITE_ENV@ (the repository root's site.env) / @RUN_USER@ / @RUN_HOME@ so it works wherever the
+# repo is checked out, and systemd then
+# substitutes %i per instance. Do not enable this file directly.
+
+[Service]
+Type=simple
+User=@RUN_USER@
+Group=@RUN_USER@
+# HOME must be the account holding ~/.ssh/config and the ControlMaster sockets. Every instance
+# runs as the SAME system account; users are separated by which HPC account their socket
+# authenticates to, not by a local account each.
+Environment=HOME=@RUN_HOME@
+Environment=PYTHONUNBUFFERED=1
+Environment=HPC_SSH_BLOCK=hpc-%i
+EnvironmentFile=@PREFECT_DIR@/worker.env
+EnvironmentFile=@SITE_ENV@
+WorkingDirectory=@PREFECT_DIR@
+ExecStart=@PREFECT_DIR@/.venv/bin/prefect worker start --pool hpc-ssh-pool-%i --type hpc-slurm-ssh-pusher
+Restart=always
+RestartSec=5
+# A stop is not a failure. Prefect's worker turns the SIGTERM systemd sends into a
+# KeyboardInterrupt and exits 130, which systemd otherwise records as `failed`, so a
+# clean drain left the unit red and a real fault looked the same as a planned stop.
+# Restart=always is unaffected: it ignores the exit status either way.
+SuccessExitStatus=130
+
+[Install]
+WantedBy=multi-user.target

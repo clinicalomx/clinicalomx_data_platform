@@ -1,0 +1,34 @@
+# Monorepo-release render of the pipeline-pool worker template; provenance and the HOME
+# capture record are in infra/systemd/README.md. The template at
+# packages/clinicalomxdb/hub-pipelines/prefect/workers/vm-pipeline/pipeline-pool-worker.service
+# stays authoritative for what this worker is.
+#
+# HOME here is the captured live-only drop-in override surfaced by the operator's D-6 drill
+# diff of 2026-08-28 (override.conf with Environment=HOME pointing at the old checkout's
+# hub-pipelines/prefect/worker-home/, the same directory the vm-pool worker uses; an earlier
+# render of this file wrongly claimed no drop-in existed). Baked in and relocated to
+# shared/runtime/ so it survives release flips, exactly as vm-pool-worker.service does (ER-26).
+[Unit]
+Description=Prefect process worker (pipeline-pool, VM pipeline orchestration tier)
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+Environment=HOME=/opt/clinicalomx_data_platform/shared/runtime/worker-home
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/opt/clinicalomx_data_platform/current/packages/clinicalomxdb/hub-pipelines/prefect/worker.env
+WorkingDirectory=/opt/clinicalomx_data_platform/current/packages/clinicalomxdb/hub-pipelines/prefect
+ExecStart=/opt/clinicalomx_data_platform/current/packages/clinicalomxdb/hub-pipelines/prefect/.venv/bin/prefect worker start --pool pipeline-pool --type process
+Restart=always
+RestartSec=5
+# A stop is not a failure. Prefect's worker turns the SIGTERM systemd sends into a
+# KeyboardInterrupt and exits 130, which systemd otherwise records as `failed`, so a
+# clean drain left the unit red and a real fault looked the same as a planned stop.
+# Restart=always is unaffected: it ignores the exit status either way.
+SuccessExitStatus=130
+
+[Install]
+WantedBy=multi-user.target

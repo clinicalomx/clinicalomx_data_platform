@@ -1,0 +1,15 @@
+# Storage locations, as the declaration carries them. These are ENVIRONMENT facts rather than
+# vocabulary: the same instance is reached from a laptop, from the HPC and from the control-plane
+# VM. hpc_file is arranged to be absent from the paired landed.json, which is what a storage
+# root declared but never registered looks like.
+
+storages:
+  - key: q0000
+    root: /rdm/Q0000
+    host: rdm
+    description: Q0000 Collection for Raw Data
+
+  - key: hpc_file
+    root: /scratch/project_mnt/S0000/dbstorage
+    host: hpc
+    description: Shared clinicalomx storage.

@@ -1,0 +1,79 @@
+[project]
+name = "clinicalomx_ledger"
+version = "0.1.0"
+description = "Append-only governance ledger for the clinicalOMx instance: claim/verdict events as a plain-Django lamin module with database-enforced immutability."
+readme = "README.md"
+# Copyright 2026 ClinicalOMXLab
+license = "Apache-2.0"
+requires-python = ">=3.11"
+dependencies = [
+    # Must be >= the instance DB schema version, or a behind package refuses to connect.
+    # lamindb is PINNED EXACTLY and must match every other environment that touches the
+    # clinicalOMx instance (clinicalomx-pipeline, clinicalomx, the croi inference wheels, the
+    # workers, the bgnorm image). Two reasons a floor is not enough:
+    #  - a package BEHIND the instance's DB schema (2.8.1) refuses to connect;
+    #  - 2.8.x changed how Artifact.suffix is derived (CanonicalSuffix is MIME-based), so `.qptiff`
+    #    records as "" where older versions wrote ".qptiff" - mixed versions left the instance
+    #    holding both spellings and silently broke every filter(suffix=...) query.
+    # Bump the instance and ALL pins together, then rebuild the SIFs and images.
+    # Beyond pydantic below, this is deliberately the only heavy runtime dependency: the
+    # ADR's measured advantage is a self-contained migration graph (0001 has
+    # dependencies = []) and zero third-party enforcement machinery (pgtrigger dropped; the
+    # trigger DDL is hand-authored in 0002).
+    "lamindb==2.8.1",
+    # `grammar/model.py` imports it directly, so the controlled vocabularies can be types and
+    # a Claim refuses an invalid one at construction. Declared even though lamindb pulls it
+    # in: depending on somebody else's dependency is not a dependency. Only pydantic v2's own
+    # surface is used (ConfigDict, model_validator, model_fields), stable since 2.0; the upper
+    # bound is there because v3 would be a different API.
+    "pydantic>=2,<3",
+]
+
+[project.optional-dependencies]
+# The lamindb half of `grammar.store.LedgerClaimStore`: subject records and their review
+# state live on the instance rather than in the ledger, and moving one goes through
+# `clinicalomx.review.set_state`, which is the only correct way to overwrite a single-valued
+# lamindb feature. An extra rather than a base dependency so `reads.py`, `services.py` and
+# `models.py` stay clear of it: a `reads` consumer never touches a store. That keeps
+# clinicalomx and this package acyclic at the base, with only this extra crossing.
+store = ["clinicalomx"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+    "testcontainers[postgres]>=4",
+    "psycopg2-binary>=2.9",
+    # For the `store` extra's own suite.
+    "clinicalomx",
+]
+
+[tool.uv.sources]
+clinicalomx = { path = "../clinicalomx" }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+sources = ["src"]
+only-include = ["src/clinicalomx_ledger"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests", "."]
+
+# Pinned explicitly so a local run and CI see the same rules.
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "C4", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+# Django-generated; its line lengths are makemigrations' output and rewrapping it
+# by hand would break the makemigrations --check test on the next regeneration.
+"src/clinicalomx_ledger/migrations/0001_initial.py" = ["E501"]
+"src/clinicalomx_ledger/migrations/0005_three_table_model.py" = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# So conftest can import `disposable.py`, the bootstrap it shares with the curation demo.
+pythonpath = ["."]

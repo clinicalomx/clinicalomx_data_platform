@@ -1,0 +1,12 @@
+# Provisioned rather than clicked, so a rebuilt Grafana comes up already pointing at Loki.
+apiVersion: 1
+datasources:
+  - name: Loki
+    type: loki
+    uid: loki
+    access: proxy
+    url: http://clinicalomxdb_loki:3100
+    isDefault: true
+    jsonData:
+      # Matches the retention in loki.yaml; Grafana uses it to bound time-range pickers.
+      maxLines: 2000

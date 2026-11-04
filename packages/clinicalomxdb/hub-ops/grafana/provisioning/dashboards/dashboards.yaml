@@ -1,0 +1,16 @@
+# Dashboards are provisioned from JSON in git rather than clicked, so a rebuilt Grafana comes up
+# with them already present and changes are reviewable.
+apiVersion: 1
+providers:
+  - name: clinicalomxdb
+    orgId: 1
+    folder: clinicalomxdb
+    type: file
+    disableDeletion: false
+    # Edits made in the UI are allowed but are NOT written back to git; export the JSON and
+    # commit it, or the next container rebuild discards them.
+    allowUiUpdates: true
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

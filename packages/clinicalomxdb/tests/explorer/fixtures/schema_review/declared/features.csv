@@ -1,0 +1,26 @@
+# A real subset of the clinicalomx foundation, lifted from the declaration as it stood at
+# ADR 0003. The rows are genuine; which of them the paired landed.json contains is what this
+# fixture arranges, so every verdict the reviewer can reach is exercised against real names.
+#
+# dtype: str | int | float | bool | datetime | num | Artifact | Record
+#        type:<TypeName> | cat[ULabel] | cat[bionty.Protein]
+# status: active | deprecated
+#
+# marker_target and parent_sample are the two halves of the bare-registry case. bionty.Protein
+# names a registry the paired landed.json enumerates, so the reviewer can say whether it agrees.
+# Sample names one it does not, and is what a type name written in the bare spelling looks like,
+# so the reviewer must report a question rather than assert drift it cannot check.
+name,dtype,description,coerce,status
+age,str,,true,
+age_at_itx,str,Superseded by age at the time of the index event.,true,deprecated
+annotations,cat[Collection],Per-image YOLO label artifacts pinned to a thumbnails collection version.,,active
+bgnorm_attempts,int,,,active
+cell_type,cat[ULabel],,,active
+Cohort,cat[Record[CEL53rJWA2uHCGoQ]],,,active
+marker_target,bionty.Protein,,,active
+n_cells,int,,,active
+parent_sample,Sample,,,active
+roi_uid,str,,,active
+slide_feature,type:Cohort,,true,active
+source_core_uid,str,,,active
+source_feature,type:Source,,,active

@@ -1,0 +1,55 @@
+[project]
+name = "vm-process-worker"
+version = "0.1.0"
+description = "Prefect process worker for the vm-pool (VM small-job tier) plus the ROI review Streamlit app. Runs the metadata flows that use the lamindb API (mint-slides, ensure-qptiffs-checked, reprocess-storage-migration, sync-model-aliases) and serves the HITL review UI."
+# Copyright 2026 ClinicalOMXLab
+license = "Apache-2.0"
+requires-python = ">=3.11"
+dependencies = [
+    "prefect==3.6.27",
+    # lamindb is PINNED EXACTLY and must match every other environment that touches the
+    # clinicalOMx instance (clinicalomx-pipeline, clinicalomx, the croi inference wheels, the
+    # workers, the bgnorm image). Two reasons a floor is not enough:
+    #  - a package BEHIND the instance's DB schema (2.8.1) refuses to connect;
+    #  - 2.8.x changed how Artifact.suffix is derived (CanonicalSuffix is MIME-based), so `.qptiff`
+    #    records as "" where older versions wrote ".qptiff". Mixed versions left the instance
+    #    holding both spellings and silently broke every filter(suffix=...) query.
+    # Bump the instance and ALL pins together, then rebuild the SIFs and images.
+    "lamindb==2.8.1",
+    "clinicalomx[models]>=0.1,<0.2",
+    "mlflow==3.14.0",
+    "pandas>=2",
+    "numpy>=2",
+    "pyarrow",
+    "scipy",
+    "streamlit==1.58.0",
+    "streamlit-drawable-canvas==0.9.3",
+    "pillow",
+]
+
+# Optional: lets the review app run the core dearray (grid fit) on the VM. The
+# croi.objectives.tma_core.gridding module is also required for it (a clinical-roi wheel or its src
+# on the path); without these the Core tab falls back to the vendored review/tma_gridding.py copy,
+# and without geopandas/shapely to raw detections. The module was core.data.gridding before the
+# objective-record change, so an older clinical-roi wheel does not carry the new name.
+[project.optional-dependencies]
+dearray = ["geopandas", "shapely"]
+
+# clinicalomx provides the vocabulary, model and environment pointers (ModelRef, promote,
+# sync_aliases), the review gate, and the Manifest/InputRef layer. The [models] extra adds the
+# MLflow fallback for model pointers, which sync-model-aliases needs.
+#
+# No worker code lives here: this file only versions and pins the service runtime env. The
+# worker is started as: prefect worker start --pool vm-pool --type process (see
+# vm-pool-worker.service). Flow code comes from the clinicalomx_pipeline repo via the
+# deployment set_working_directory step, so it is not a dependency here.
+
+[tool.uv.sources]
+clinicalomx = { path = "../../../../../clinicalomx" }
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = []

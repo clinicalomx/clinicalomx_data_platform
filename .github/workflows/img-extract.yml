@@ -1,0 +1,129 @@
+# Builds the Spatial Data Builder backend which queries spatial elements 
+# in the database and gives an interface for users to build or
+# materialize analysis ready Spatial Datasets.
+name: img-extract
+
+on:
+  push:
+    branches: [main]
+    tags: ["clinicalomx-pipeline-v*"]
+    paths:
+      - "packages/clinicalomx_pipelines/qptiff_pipeline/containers/Dockerfile.extract"
+      - ".github/workflows/img-extract.yml"
+  workflow_run:
+    workflows: ["release-clinicalomx"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+defaults:
+  run:
+    working-directory: packages/clinicalomx_pipelines/qptiff_pipeline
+
+jobs:
+  build:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: astral-sh/setup-uv@v5
+      - name: Build the clinicalomx wheel into the build context
+        working-directory: .
+        run: uv build --wheel --out-dir packages/clinicalomx_pipelines/dist packages/clinicalomx
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: imagetag
+        run: |
+          set -euo pipefail
+          cx=$(grep -oP '^ARG CLINICALOMX_VERSION=\K\S+' containers/Dockerfile.extract)
+          bio=$(grep -oP '^ARG BIOIO_QPTIFF_COMMIT=\K\S+' containers/Dockerfile.extract)
+          [ -n "$cx" ] || { echo "::error::could not read CLINICALOMX_VERSION from Dockerfile.extract"; exit 1; }
+          [ -n "$bio" ] || { echo "::error::could not read BIOIO_QPTIFF_COMMIT from Dockerfile.extract"; exit 1; }
+          echo "tag=cx${cx}-bio${bio:0:7}" >> "$GITHUB_OUTPUT"
+          echo "clinicalomx $cx + reader ${bio:0:7} -> comx-extract:cx${cx}-bio${bio:0:7}"
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/comx-extract
+          tags: |
+            type=raw,value=${{ steps.imagetag.outputs.tag }}
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha
+
+      - id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: packages/clinicalomx_pipelines
+          file: packages/clinicalomx_pipelines/qptiff_pipeline/containers/Dockerfile.extract
+          push: true
+          load: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Smoke test the image
+        run: docker run --rm ghcr.io/${{ github.repository_owner }}/comx-extract:${{ steps.imagetag.outputs.tag }}
+
+      - name: Install apptainer
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          url=$(gh api repos/apptainer/apptainer/releases/latest \
+            --jq '.assets[] | select(.name | test("^apptainer_[0-9][^-]*_amd64\\.deb$")) | .browser_download_url' | head -1)
+          test -n "$url"
+          curl -fsSL -o /tmp/apptainer.deb "$url"
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends /tmp/apptainer.deb
+          sudo apptainer --version
+
+      - name: Build and publish the SIF
+        env:
+          TAG: ${{ steps.imagetag.outputs.tag }}
+          APPTAINER_DOCKER_USERNAME: ${{ github.actor }}
+          APPTAINER_DOCKER_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          APPTAINER_DISABLE_CACHE: "true"
+        run: |
+          set -euo pipefail
+          docker image prune -af >/dev/null 2>&1 || true
+          df -h / | tail -1
+          sudo -E apptainer build "comx-extract_${TAG}.sif" \
+            "docker://ghcr.io/${{ github.repository_owner }}/comx-extract:${TAG}"
+          ls -lh "comx-extract_${TAG}.sif"
+          sudo -E apptainer push "comx-extract_${TAG}.sif" \
+            "oras://ghcr.io/${{ github.repository_owner }}/comx-extract-sif:${TAG}"
+
+      - name: Write the environment manifest
+        env:
+          IMAGE: ghcr.io/${{ github.repository_owner }}/comx-extract:${{ steps.imagetag.outputs.tag }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+          SOURCE_REF: ${{ github.ref_type == 'tag' && github.ref_name || format('{0}@{1}', github.ref_name, github.sha) }}
+          SIF_ORAS_REF: oras://ghcr.io/${{ github.repository_owner }}/comx-extract-sif:${{ steps.imagetag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/env-manifests"
+          out="$RUNNER_TEMP/env-manifests/comx-extract.json"
+          jq -n --arg image "$IMAGE" --arg digest "$DIGEST" --arg source_ref "$SOURCE_REF" \
+                --arg sif_oras_ref "$SIF_ORAS_REF" \
+                '$ARGS.named | with_entries(select(.value != ""))' > "$out"
+          cat "$out"
+          { echo '```json'; cat "$out"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: env-manifest-extract-${{ steps.imagetag.outputs.tag }}
+          path: ${{ runner.temp }}/env-manifests/
+          if-no-files-found: error

@@ -1,0 +1,72 @@
+# Runtime image for the LIGHT HPC stages - the ones that read the database and a qptiff, and
+# nothing else.
+#
+# WHY THIS EXISTS. 19 deployments run on hpc-ssh-pool and only 5 of them are heavy (the detect and
+# persist stages need geopandas/shapely, bgnorm-core needs bgnorm and mlflow). The other 14 were
+# running the ~6GB croi inference image for its lamindb and, in check-qptiffs' case, its bioio. That
+# cost is paid twice over: once in the SIF, and once on every iteration - a one-line change to the
+# qptiff reader meant a full croi rebuild, which is 40 minutes.
+#
+# So: prefect + lamindb + clinicalomx + the qptiff reader, on a slim python base. No torch, no
+# ultralytics, no geo stack. The flow code arrives by git_clone at run time and is NOT copied here,
+# which is what lets one image serve every light stage.
+#
+# The hpc worker execs `apptainer exec <sif> prefect flow-run execute`, so prefect has to be IN the
+# image - an image without it dies with `"prefect": executable file not found`.
+#
+# TAG SCHEME. The tag names BOTH things that determine the contents: the clinicalomx foundation and
+# the qptiff reader commit. SIFs are cached on the HPC BY PATH, so `sif_artifact:
+# environments/<owner>/comx-qptiff_<tag>.sif` is only refetched when the tag changes - and this image's whole
+# reason to exist is that the reader moves often. A tag that named only the framework would publish a
+# genuinely new image under an old path and every HPC run would keep executing the previous SIF.
+# That has happened here before: it is how a stage kept running clinicalomx v0.1.0 after the pin
+# moved. CI derives the tag from the two pins below, so this file stays the single source of truth.
+#
+# Build manually (CI does this on a push that touches this file):
+#   uv build --wheel --out-dir dist ../clinicalomx     # from packages/clinicalomx_pipelines
+#   docker build -f qptiff_pipeline/containers/Dockerfile.qptiff \
+#     -t ghcr.io/<owner>/comx-qptiff:cx0.1.0-bio23e46aa .
+FROM python:3.12-slim
+
+# git: lamindb shells out to it for run provenance, and the reader is a git dependency (below).
+# The reader repo is PUBLIC, so no credential is needed for that clone.
+RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+# EXACT pins, deliberately, while pyproject.toml declares ranges. Not a second opinion about the
+# range: the tag above encodes these versions and is what the SIF path is derived from, so a range
+# would let two builds under one tag hold different contents. An exact pin makes the tag a true
+# statement.
+#
+# lamindb must equal the instance's DB schema and every other environment that writes to it (this
+# repo's pyproject, Dockerfile.bgnorm, the croi images). A floor is not enough - 2.8.x changed how
+# Artifact.suffix is derived, and a drifted resolve left the instance holding two spellings of
+# `.qptiff`.
+#
+# The reader is pinned to a COMMIT, not a branch. A branch would make this image's contents depend on
+# when it was built, which the tag cannot express.
+ARG CLINICALOMX_VERSION=0.1.0
+ARG BIOIO_QPTIFF_COMMIT=23e46aaa39a3d9c2adcce33d20fe691e1fc75d2a
+
+# First-party code is a wheel built from this checkout into dist/ by the image workflow. A
+# `name @ file://` requirement cannot be satisfied by any index, so no published clinicalomx can
+# be selected in its place.
+COPY dist /src/dist
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --system \
+      "prefect>=3.0" \
+      "lamindb==2.8.1" \
+      "clinicalomx[prefect] @ file:///src/dist/clinicalomx-${CLINICALOMX_VERSION}-py3-none-any.whl" \
+      "bioio" \
+      "bioio-qptiff @ git+https://github.com/rtubelleza/bioio-qptiff@${BIOIO_QPTIFF_COMMIT}" \
+      "tifffile" \
+      "pillow" \
+      "numpy>=1.26"
+
+# Asserts rather than imports. Both of these are failures an import check cannot see:
+# a drifted lamindb is the exact thing the pin exists to prevent, and a reader without the channel
+# locus is a reader that predates the paged-file parse fix - which check-qptiffs' refresh mode
+# refuses to run against, so an image carrying one would be useless in a way nothing else reports.
+CMD ["python", "-c", "import prefect, clinicalomx, lamindb, bioio, bioio_qptiff, tifffile, numpy, PIL; assert lamindb.__version__ == '2.8.1', f'lamindb {lamindb.__version__} != pinned 2.8.1'; assert hasattr(bioio_qptiff, 'LOCUS_PER_PAGE_ROOT'), 'reader predates the channel-locus fix'; print('comx-qptiff image OK (lamindb', lamindb.__version__, '| clinicalomx', clinicalomx.__version__, ')')"]

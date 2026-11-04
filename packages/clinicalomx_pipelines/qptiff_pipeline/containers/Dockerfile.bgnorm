@@ -1,0 +1,54 @@
+# Runtime image for the bgnorm stage on the HPC.
+#
+# The hpc worker execs `apptainer exec <sif> prefect flow-run execute`, so the SIF must carry
+# the orchestration stack (prefect + lamindb + clinicalomx) on top of the bgnormPy science stack.
+# The plain ghcr.io/bhuvalab/bgnormpy image has none of those, which is why a job built from it
+# dies with `"prefect": executable file not found`. clinical_roi is NOT needed (the core crop is
+# inlined in flows/bgnorm.py). The flow code arrives via git_clone at run time, not copied here.
+#
+# The base ghcr.io/bhuvalab/bgnormpy package must be PUBLIC for this FROM to resolve without
+# cross-org auth (both a personal login and CI's GITHUB_TOKEN only reach this repo's packages).
+#
+# The inference image is tagged to MIRROR the FROM tag below (CI derives it from this line), e.g.
+# bgnormpy:v0.1.2 -> bgnorm-inference:v0.1.2. Bump this pin to roll the science stack, and pin the
+# deployment (prefect.yaml image + sif_artifact) to the same version so the SIF path changes and
+# the HPC rebuilds the SIF automatically instead of reusing a stale cached path.
+# Build manually, mirroring the FROM tag, from packages/clinicalomx_pipelines:
+#   uv build --wheel --out-dir dist ../clinicalomx
+#   docker build -f qptiff_pipeline/containers/Dockerfile.bgnorm \
+#     -t ghcr.io/<owner>/bgnorm-inference:v0.1.2-cx0.1.0 .
+FROM ghcr.io/bhuvalab/bgnormpy:v0.1.2
+
+# uv + the /opt/venv env come from the base image. lamindb shells out to git for run provenance.
+RUN apt-get update && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Layer the orchestration stack + geopandas/pyarrow (the crop reads the cores GeoParquet) into
+# the base env at /opt/venv. lamindb is PINNED EXACTLY and must match the pipeline pyproject: a
+# floor let this image resolve a different lamindb than the VM and the croi SIFs, and 2.8.x changed
+# how Artifact.suffix is derived, so the instance ended up holding two spellings of `.qptiff`.
+#
+# clinicalomx is pinned to an EXACT version here, while pyproject.toml declares the range
+# `>=0.1,<0.2`. That is deliberate and is not a second opinion about the range. The SIF is cached on
+# the HPC by a PATH derived from this image's tag, and the tag encodes this version (see the CI
+# workflow), so a range would let two builds under one tag hold different foundation layers and
+# every HPC run would keep executing whichever SIF was built first. An exact pin makes the tag a
+# true statement about the contents.
+#
+# First-party code is a wheel built from this checkout into dist/ by the image workflow. A
+# `name @ file://` requirement cannot be satisfied by any index, so no published clinicalomx can
+# be selected in its place.
+ARG CLINICALOMX_VERSION=0.1.0
+COPY dist /src/dist
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --python /opt/venv/bin/python \
+      "prefect>=3.0" \
+      "lamindb==2.8.1" \
+      "geopandas>=1.0" \
+      "pyarrow" \
+      "clinicalomx[prefect] @ file:///src/dist/clinicalomx-${CLINICALOMX_VERSION}-py3-none-any.whl"
+
+# Validate the exact imports the worker + flow need at run time.
+# Smoke test ASSERTS the lamindb pin, not merely that it imports: a drifted resolve is exactly the
+# failure this pin exists to prevent, and it is invisible to an import check.
+CMD ["python", "-c", "import prefect, clinicalomx, bgnorm, bioio, lamindb; assert lamindb.__version__ == '2.8.1', f'lamindb {lamindb.__version__} != pinned 2.8.1'; print('bgnorm-flow image OK (lamindb', lamindb.__version__, ')')"]

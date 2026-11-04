@@ -1,0 +1,73 @@
+# hub-ops environment - the SCHEMA for hub-ops/.env.
+#
+# THE NAME. This file is environment.example, not the .env.example the other repos use. The
+# agent guard in this environment blocks every write to a path containing .env, which includes
+# .env.example, so the tracked schema could not be edited at all under the old name. The three
+# hub stacks were renamed together rather than one of them, so the convention stays uniform.
+# The REAL file each one produces is still .env, because compose env_file and --env-file expect
+# that name.
+#
+# WHERE THE REAL VALUES LIVE FOR A REBUILD: NOWHERE.
+#   Unlike hub-database/.env and hub-pipelines/.env, this file is NOT stored in Barbican.
+#   ../../infra/control_plane/secrets.tf holds those two and no third. A rebuilt VM therefore has no
+#   copy of whatever was running: the boot unit materialises hub-ops/.env from THIS example,
+#   verbatim, with `cp -n`. Every value below is what the next rebuilt VM will actually run
+#   with, and any value an operator set on the box by hand is gone.
+#   To rotate a value here: change it on the VM AND in this file, or the change lasts until the
+#   next rebuild. That is a real gap, not a design; see the pull request that added this note.
+#
+# Consumed by the caddy, cadvisor and grafana services (hub-ops/docker-compose.yml) and by the
+# tunnel / tunnel-close Makefile targets, which run on the OPERATOR machine rather than the VM.
+# `make ops-env-check` fails if the real .env is missing any key below, or still holds a
+# placeholder. It runs as a prerequisite of ops-up. It does NOT run at boot: the systemd unit
+# calls docker compose directly, so a placeholder left here reaches a container on a rebuild.
+
+# --- config (non-secret) -----------------------------------------------------
+# CONFIG: loopback port the portal is published on, at both ends of the tunnel. Left as a real
+# value deliberately: compose must render it as a port number, both ends are 127.0.0.1, and the
+# same 8080 appears in every compose file and runbook already, so a placeholder here would
+# break `docker compose config` and the boot copy while hiding nothing.
+OPS_PORTAL_PORT=8080
+
+# CONFIG: the portal's own origin, as a BROWSER on the operator machine sees it. Grafana needs
+# it for GF_SERVER_ROOT_URL, or every asset and redirect it emits points at the wrong place.
+# Keep the port in step with OPS_PORTAL_PORT above and with OPS_PORTAL_URL in hub-pipelines.
+OPS_PORTAL_URL=http://localhost:8080
+
+# CONFIG: the VM the tunnel lands on. Fill in the pre-allocated floating IP, which is held as an
+# OpenTofu data source (../../infra/control_plane/network.tf) and was created once outside tofu, so it
+# survives instance destroy and rebuild. `tofu output` on that root prints it. Kept in the .env
+# rather than hardcoded in the Makefile so a staging VM can differ, and left as a placeholder
+# here so the address is not published in a tracked file.
+OPS_SSH_TARGET=ubuntu@VM_FLOATING_IP
+
+# CONFIG: ControlMaster socket for the tunnel itself, so a second `make tunnel` is instant and
+# `make tunnel-close` targets exactly this session rather than pkill-ing by pattern.
+OPS_TUNNEL_SOCKET=~/.ssh/cm-clinicalomxhub
+
+# --- config: unified logging (docs/architecture/decisions/0006) ---------------------------------
+# CONFIG: Docker's data-root, which this VM moves off the root disk (ADR 0001 Decision 4).
+# cAdvisor needs the real path to read per-container metrics. On a dev box set /var/lib/docker.
+OPS_DOCKER_ROOT=/mnt/docker
+
+# CONFIG: bind mounts for the Prometheus, Loki and Grafana state. All three default to the
+# snapshotted artifacts volume on the VM; point them somewhere local to run the stack on a dev
+# box. `make ops-dirs` creates each one with the uid its image runs as.
+OPS_PROMETHEUS_DIR=/mnt/data/artifacts/prometheus
+OPS_LOKI_DIR=/mnt/data/artifacts/loki
+OPS_GRAFANA_DIR=/mnt/data/artifacts/grafana
+
+# --- secrets (never commit a real value) -------------------------------------
+# This file DOES hold a secret, which an earlier version of this comment denied. The Grafana
+# admin password below is one, and it is the only thing guarding Grafana's admin surface:
+# ADR 0007 Decision 3 puts Grafana in the Admin tier, Decision 4 serves that tier from the
+# loopback listener, and that listener has no auth proxy, so no edge identity ever reaches it.
+# Decision 6 leaves the choice open: keep this password, or drop it and trust the listener.
+#
+# Because the boot unit copies this file verbatim, a working password here WOULD BE the live
+# password on every rebuilt VM, published in git. So it is a placeholder, and ops-env-check
+# refuses to start the stack until the placeholder is replaced.
+# CONFIG: the account name the password belongs to.
+GRAFANA_ADMIN_USER=admin
+# SECRET.
+GRAFANA_ADMIN_PASSWORD=CHANGEME

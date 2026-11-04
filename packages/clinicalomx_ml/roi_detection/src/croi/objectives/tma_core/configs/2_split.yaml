@@ -1,0 +1,25 @@
+# Run this stage with: python -m croi tma_core split
+#
+# Partitions the paired core dataset into deterministic, stable train/val/test
+# Collections (the source of truth for training). No data_dir: this stage only
+# reads/writes lamindb Collections, no transient on-disk files.
+#
+# Split identity is the SOURCE SLIDE (crop stem minus its `_tma_<i>` suffix), so
+# every core cut from one slide lands in the same split (no slide leakage).
+#
+# inputs   = the governed Collection/Artifact CONSUMED.
+# outputs  = the train/val/test split Collections PRODUCED.
+inputs:
+  dataset:    {kind: collection, key: clinical-roi/core}              # paired (image, label), from 1_ingest_labels
+  categories: {kind: artifact,   key: core_labels/notes.json}        # full_core/partial_core taxonomy (lineage input)
+
+outputs:
+  splits:
+    key_prefix: clinical-roi/core/splits   # -> /train, /val, /test
+    description: "Slide-stratified train/val/test split of core (image, label) pairs."
+
+parameters:
+  split:
+    validation_fraction: 0.15
+    test_fraction: 0.15
+    seed: 40

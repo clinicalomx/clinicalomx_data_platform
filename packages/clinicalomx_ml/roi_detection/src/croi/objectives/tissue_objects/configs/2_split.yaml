@@ -1,0 +1,23 @@
+# Run this stage with: python -m croi tissue_objects split
+#
+# Partitions the labeled dataset into deterministic, stable train/val/test
+# Collections (the source of truth for training). No data_dir: this stage only
+# reads/writes lamindb Collections, no transient on-disk files.
+#
+# inputs   = the governed Collections/Artifacts CONSUMED.
+# outputs  = the train/val/test split Collections PRODUCED.
+inputs:
+  thumbnails: {kind: collection, key: clinical-roi/thumbnails}        # the PNGs
+  labels:     {kind: collection, key: clinical-roi/general/labels}    # per-round labels (from 1_ingest_labels)
+  categories: {kind: artifact, key: general_labels/notes.json}      # taxonomy (lineage input)
+
+outputs:
+  splits:
+    key_prefix: clinical-roi/general/splits   # -> /train, /val, /test
+    description: "Stratified-by-image-identity train/val/test split of (png, label) pairs."
+
+parameters:
+  split:
+    validation_fraction: 0.10
+    test_fraction: 0.10
+    seed: 40

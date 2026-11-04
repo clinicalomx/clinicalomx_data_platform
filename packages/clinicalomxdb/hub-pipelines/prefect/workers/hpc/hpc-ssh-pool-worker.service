@@ -1,0 +1,34 @@
+[Unit]
+Description=Prefect hpc-slurm-ssh-pusher worker (hpc-ssh-pool)
+After=docker.service network-online.target
+Wants=network-online.target
+# HPC SLURM submissions require an interactive DUO SSH auth once per reboot
+# (run: ssh hpc echo ok, as the @RUN_USER@ user). The worker runs without it;
+# only job submissions need the ControlMaster socket.
+#
+# This file is a TEMPLATE. deploy-service.sh substitutes @PREFECT_DIR@, @SITE_ENV@ (the
+# repository root's site.env), @RUN_USER@ and @RUN_HOME@ and installs the result to
+# /etc/systemd/system/hpc-ssh-pool-worker.service, so the worker runs wherever
+# the repo is checked out (the VM clones to /opt, a dev box may differ). Do not
+# enable this file directly; run deploy-service.sh (or bootstrap.sh).
+
+[Service]
+Type=simple
+User=@RUN_USER@
+Group=@RUN_USER@
+Environment=HOME=@RUN_HOME@
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=@PREFECT_DIR@/worker.env
+EnvironmentFile=@SITE_ENV@
+WorkingDirectory=@PREFECT_DIR@
+ExecStart=@PREFECT_DIR@/.venv/bin/prefect worker start --pool hpc-ssh-pool --type hpc-slurm-ssh-pusher
+Restart=always
+RestartSec=5
+# A stop is not a failure. Prefect's worker turns the SIGTERM systemd sends into a
+# KeyboardInterrupt and exits 130, which systemd otherwise records as `failed`, so a
+# clean drain left the unit red and a real fault looked the same as a planned stop.
+# Restart=always is unaffected: it ignores the exit status either way.
+SuccessExitStatus=130
+
+[Install]
+WantedBy=multi-user.target

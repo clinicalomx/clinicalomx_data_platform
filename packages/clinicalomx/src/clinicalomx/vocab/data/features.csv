@@ -1,0 +1,37 @@
+# THE FOUNDATION. Only what the framework itself reads or writes, plus the interchange
+# conventions that have no single owning repo. Everything else is declared by the repo that
+# uses it, via clinicalomx.vocab.Vocabulary - see docs/extending.md
+#
+# The test for membership: would a brand-new clinicalomx instance be broken without it?
+# `roi_uid` yes. `bgnorm_attempts` no.
+#
+# This file is a CONTRACT, not a mirror of the instance. Features present in the database and
+# absent here are expected; `audit` lists them as extra and attributes them to whichever
+# installed consumer declares them.
+#
+# dtype: str | int | float | bool | datetime | date | num
+#        Artifact | Record | Collection | cat[Artifact] | cat[bionty.Protein]
+#        type:<TypeName>        categorical pinned to a types.yaml entry
+# status: active | deprecated   (deprecated rows are kept, never re-seeded)
+name,dtype,description,coerce,status
+cohort_feature,type:Cohort,,true,active
+coordinate_space,str,,true,active
+def_text,str,The apptainer .def an environment image was built from (provenance).,,active
+docker_ref,str,,,active
+parent_roi,cat[Record],,,active
+patient,type:Patient,,,active
+patient_id,str,Local patient ID. Deidentified.,true,active
+pipeline_state,str,,,active
+registered_env,str,,,active
+roi_id,str,,true,active
+roi_name,str,,,active
+roi_parquet,cat[Artifact],,true,active
+roi_type,str,,,active
+roi_uid,str,,,active
+scale,str,,true,active
+scene,str,,true,active
+slide,type:WholeSlide,The WholeSlide ROI a record belongs to. The Slide link of the clinical spine.,,active
+slide_feature,type:Cohort,"DEPRECATED: mistyped to Cohort by an early seed. Superseded by `slide`. Kept because an ln.Feature that has been used cannot be deleted; never re-seeded.",true,deprecated
+source_artifact,cat[Artifact],,true,active
+source_feature,type:Source,,,active
+source_image,cat[Artifact],,,active

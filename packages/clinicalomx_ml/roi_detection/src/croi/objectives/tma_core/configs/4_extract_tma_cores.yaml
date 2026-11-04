@@ -1,0 +1,37 @@
+# Run this stage with: python -m croi tma_core extract-tma-cores
+#
+# Dearray each QPTIFF into per-core shapes on FullResolution (the serve_kidane logic):
+# detect TMAs (roi-general) + cores (roi-core) on the smallest pyramid level, fit the grid
+# (full grid incl. inferred cells), persist geometry as GeoParquet shape Artifacts, and
+# build the WholeSlide -> TMA -> Core ROI graph. Full-res core FOVs are derived ON DEMAND
+# (croi.objectives.tma_core.crops.core_crop) -- no per-core PNGs are stored.
+data_dir: rois
+
+inputs:
+  # The QPTIFFs to dearray (a DISCOVERED query, like 0_ingest / 5_extract_pyramid_low_scale).
+  qptiffs:
+    query: artifacts
+    suffix: .qptiff
+    exclude_key_contains: [dmso, "/._"]   # drop DMSO controls + macOS resource-fork sidecars
+  # The two served detectors (ModelRef selectors; lamindb alias or MLflow side).
+  #   lamindb: {alias: production} | {uid: <uid>} | {key: models/<obj>/best.pt}
+  #   mlflow : {mlflow_version: 3} | {mlflow_alias: production} | {mlflow_run_id: <id>}
+  general_model: {alias: production}   # roi-general: locates TMA grids
+  core_model: {alias: production}      # roi-core: detects cores within each TMA
+
+outputs:
+  tma_shapes:
+    key_template: "rois/{stem}_rois.parquet"     # GeoParquet of TMA detections (per slide)
+    description: "TMA detection shapes (GeoParquet)."
+  core_shapes:
+    key_template: "rois/{stem}_cores.parquet"    # GeoParquet of the full core grid (per slide)
+    description: "Dearray core grid shapes (detected + inferred; GeoParquet)."
+
+parameters:
+  tma_conf: 0.3         # general-model confidence for TMA detection
+  core_conf: 0.1        # core-model confidence for core detection
+  # There is deliberately no iou / agnostic_nms knob: overlap suppression is model-agnostic
+  # and lives in croi.objectives.tma_core.dearray.detect_cores, which applies it to the raw boxes at
+  # its own conservative thresholds. The keys that used to be here reached ultralytics' NMS, where
+  # an end2end head ignored them outright.
+  expected_shape: null  # optional [n_rows, n_cols] grid prior; null -> inferred from detections

@@ -1,0 +1,58 @@
+{
+  "_comment": [
+    "What collect.landed() returns, captured in the shape lamin_api produces. Paired with",
+    "declared/ so that the two deliberately disagree: source_core_uid was declared and did not",
+    "land, bgnorm_attempts landed as float where int was declared, the Patient type was deleted",
+    "and recreated under a new uid, the Core type never landed, and bgnormed_image landed with",
+    "nobody declaring it. parent_sample landed under a uid-pinned dtype while its declaration",
+    "names the bare registry Sample, which the registries below do not enumerate, so the",
+    "reviewer cannot confirm the expected spelling and must not claim drift.",
+    "The registries list carries bionty.Protein because marker_target is declared against it and",
+    "that declaration IS confirmable, which is the half of the pair that must still match.",
+    "values_incomplete is lamin_api's own statement that it read the WHOLE permitted-value list,",
+    "which is the only thing that can say so: it caps each part of a dtype and then deduplicates,",
+    "so a truncated list comes back shorter than the cap and the length proves nothing.",
+    "connection is the endpoint that answered, and it is the control-plane VM's own shape:",
+    "the host is the postgres container because LAMIN_DB_HOST_OVERRIDE rewrites it there.",
+    "It carries no password because lamin_api never reads one, which the page asserts."
+  ],
+  "instance": "example-org/clinicalomx",
+  "connection": {
+    "host": "postgres",
+    "port": "5432",
+    "database": "lamindb",
+    "role": "root"
+  },
+  "features": [
+    {"name": "age", "dtype": "str", "description": null, "unit": null, "values": null, "values_incomplete": false},
+    {"name": "annotations", "dtype": "cat[Collection]", "description": "Per-image YOLO label artifacts pinned to a thumbnails collection version.", "unit": null, "values": [], "values_incomplete": false},
+    {"name": "bgnorm_attempts", "dtype": "float", "description": null, "unit": null, "values": null, "values_incomplete": false},
+    {"name": "bgnormed_image", "dtype": "cat[Artifact]", "description": null, "unit": null, "values": [], "values_incomplete": false},
+    {"name": "cell_type", "dtype": "cat[ULabel]", "description": null, "unit": null, "values": ["B cell", "CD4-positive, alpha-beta T cell", "Macrophage", "T cell"], "values_incomplete": false},
+    {"name": "Cohort", "dtype": "cat[Record[CEL53rJWA2uHCGoQ]]", "description": null, "unit": null, "values": ["MELANOMA-1", "NSCLC-2"], "values_incomplete": false},
+    {"name": "marker_target", "dtype": "cat[bionty.Protein]", "description": null, "unit": null, "values": [], "values_incomplete": false},
+    {"name": "n_cells", "dtype": "int", "description": null, "unit": null, "values": null, "values_incomplete": false},
+    {"name": "parent_sample", "dtype": "cat[Record[Sa9mPLe4kQ2vTxB1]]", "description": null, "unit": null, "values": [], "values_incomplete": false},
+    {"name": "roi_uid", "dtype": "str", "description": null, "unit": null, "values": null, "values_incomplete": false},
+    {"name": "slide_feature", "dtype": "cat[Record[CEL53rJWA2uHCGoQ]]", "description": null, "unit": null, "values": ["MELANOMA-1", "NSCLC-2"], "values_incomplete": false},
+    {"name": "source_feature", "dtype": "cat[Record[FqD2uLatjhKZJmbr]]", "description": null, "unit": null, "values": [], "values_incomplete": false}
+  ],
+  "types": [
+    {"name": "Cohort", "uid": "CEL53rJWA2uHCGoQ", "description": "Study cohort grouping patients.", "count": 2},
+    {"name": "Patient", "uid": "9wKzB2mQaLtY7dVe", "description": "An individual patient.", "count": 41},
+    {"name": "ROI", "uid": "9QryVffwCZ424wYv", "description": "Region of interest.", "count": 118},
+    {"name": "Slide", "uid": "0pM4rTgxKe8LqB1v", "description": "A physical slide.", "count": 12}
+  ],
+  "registries": [
+    {"name": "Artifact", "module": "lamindb", "description": "A file or folder tracked by lamindb.", "count": 6},
+    {"name": "Feature", "module": "lamindb", "description": "A measurable dimension.", "count": 10},
+    {"name": "Protein", "module": "bionty", "description": "A protein.", "count": 87},
+    {"name": "Record", "module": "lamindb", "description": "A record of an entity.", "count": 173},
+    {"name": "Storage", "module": "lamindb", "description": "A storage location.", "count": 2},
+    {"name": "ULabel", "module": "lamindb", "description": "A universal label.", "count": 4}
+  ],
+  "storages": [
+    {"uid": "Ck8pQ2mN", "root": "/rdm/Q0000", "description": "Q0000 Collection for Raw Data"},
+    {"uid": "Tz4vLw9R", "root": "/mnt/data/artifacts", "description": "control-plane local artifacts"}
+  ]
+}

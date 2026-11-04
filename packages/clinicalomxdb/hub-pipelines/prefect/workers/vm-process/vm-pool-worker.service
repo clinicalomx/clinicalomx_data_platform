@@ -1,0 +1,34 @@
+[Unit]
+Description=Prefect process worker (vm-pool, VM small-job tier: mint-slides etc.)
+After=docker.service network-online.target
+Wants=network-online.target
+# VM-side small, granular jobs that use the lamindb API (e.g. mint-slides writes
+# Slide Records). Runs in a DEDICATED venv with lamindb installed; LAMIN_API_KEY
+# (in this folder's .env) lets it connect to the site's lamindb instance.
+#
+# This file is a TEMPLATE. bootstrap.sh substitutes @PREFECT_DIR@ / @RUN_USER@ /
+# @RUN_HOME@ and installs the result to /etc/systemd/system. Unlike the shared-venv
+# pools, this uses its own venv at @PREFECT_DIR@/workers/vm-process/.venv and reads
+# an extra EnvironmentFile (its .env with LAMIN_API_KEY). Do not enable this file
+# directly; run bootstrap.sh once its dedicated venv + .env exist.
+
+[Service]
+Type=simple
+User=@RUN_USER@
+Group=@RUN_USER@
+Environment=HOME=@RUN_HOME@
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=@PREFECT_DIR@/worker.env
+EnvironmentFile=@PREFECT_DIR@/workers/vm-process/.env
+WorkingDirectory=@PREFECT_DIR@
+ExecStart=@PREFECT_DIR@/workers/vm-process/.venv/bin/prefect worker start --pool vm-pool --type process
+Restart=always
+RestartSec=5
+# A stop is not a failure. Prefect's worker turns the SIGTERM systemd sends into a
+# KeyboardInterrupt and exits 130, which systemd otherwise records as `failed`, so a
+# clean drain left the unit red and a real fault looked the same as a planned stop.
+# Restart=always is unaffected: it ignores the exit status either way.
+SuccessExitStatus=130
+
+[Install]
+WantedBy=multi-user.target

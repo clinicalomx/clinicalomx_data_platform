@@ -1,0 +1,734 @@
+{
+  "headers": {
+    "content-type": "application/json",
+    "x-uniprot-release": "2026_02",
+    "x-uniprot-release-date": "10-June-2026"
+  },
+  "body": {
+    "entryType": "UniProtKB reviewed (Swiss-Prot)",
+    "primaryAccession": "P08670",
+    "proteinDescription": {
+      "recommendedName": {
+        "fullName": {
+          "evidences": [
+            {
+              "evidenceCode": "ECO:0000312",
+              "source": "HGNC",
+              "id": "HGNC:12692"
+            }
+          ],
+          "value": "Vimentin"
+        }
+      }
+    },
+    "genes": [
+      {
+        "geneName": {
+          "evidences": [
+            {
+              "evidenceCode": "ECO:0000312",
+              "source": "HGNC",
+              "id": "HGNC:12692"
+            }
+          ],
+          "value": "VIM"
+        }
+      }
+    ],
+    "comments": [
+      {
+        "texts": [
+          {
+            "evidences": [
+              {
+                "evidenceCode": "ECO:0000250",
+                "source": "UniProtKB",
+                "id": "A0A8C0N8E3"
+              },
+              {
+                "evidenceCode": "ECO:0000250",
+                "source": "UniProtKB",
+                "id": "P20152"
+              },
+              {
+                "evidenceCode": "ECO:0000250",
+                "source": "UniProtKB",
+                "id": "P31000"
+              }
+            ],
+            "value": "Vimentins are class-III intermediate filaments found in various non-epithelial cells, especially mesenchymal cells. Vimentin is attached to the nucleus, endoplasmic reticulum, and mitochondria, either laterally or terminally. Plays a role in cell directional movement, orientation, cell sheet organization and Golgi complex polarization at the cell migration front (By similarity). Protects SCRIB from proteasomal degradation and facilitates its localization to intermediate filaments in a cell contact-mediated manner (By similarity). May promote axon outgrowth and motor fiber repair via DSP-mediated recruitment to outgrowth tips (By similarity)"
+          }
+        ],
+        "commentType": "FUNCTION"
+      },
+      {
+        "texts": [
+          {
+            "evidences": [
+              {
+                "evidenceCode": "ECO:0000269",
+                "source": "PubMed",
+                "id": "21746880"
+              }
+            ],
+            "value": "Involved with LARP6 in the stabilization of type I collagen mRNAs for CO1A1 and CO1A2"
+          }
+        ],
+        "commentType": "FUNCTION"
+      },
+      {
+        "commentType": "SUBCELLULAR LOCATION",
+        "subcellularLocations": [
+          {
+            "location": {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "19386766"
+                },
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "21465480"
+                },
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "29496907"
+                }
+              ],
+              "value": "Cytoplasm",
+              "id": "SL-0086"
+            }
+          },
+          {
+            "location": {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "18408015"
+                },
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "29496907"
+                }
+              ],
+              "value": "Cytoplasm, cytoskeleton",
+              "id": "SL-0090"
+            }
+          },
+          {
+            "location": {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000250",
+                  "source": "UniProtKB",
+                  "id": "P31000"
+                }
+              ],
+              "value": "Nucleus matrix",
+              "id": "SL-0181"
+            }
+          },
+          {
+            "location": {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000250",
+                  "source": "UniProtKB",
+                  "id": "P20152"
+                }
+              ],
+              "value": "Cell membrane",
+              "id": "SL-0039"
+            }
+          },
+          {
+            "location": {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000250",
+                  "source": "UniProtKB",
+                  "id": "P20152"
+                }
+              ],
+              "value": "Cell projection, axon",
+              "id": "SL-0279"
+            }
+          }
+        ]
+      }
+    ],
+    "uniProtKBCrossReferences": [
+      {
+        "database": "GO",
+        "id": "GO:0030424",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:axon"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IBA:GO_Central"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0031252",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:cell leading edge"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:Ensembl"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005737",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:cytoplasm"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "19386766"
+          },
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "20603131"
+          },
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "29496907"
+          },
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "9150946"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005856",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:cytoskeleton"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:MGI"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "16769727"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005829",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:cytosol"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "21746880"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0070062",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:extracellular exosome"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "HDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0007005",
+            "source": "PubMed",
+            "id": "20458337"
+          },
+          {
+            "evidenceCode": "ECO:0007005",
+            "source": "PubMed",
+            "id": "21362503"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005925",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:focal adhesion"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "HDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0007005",
+            "source": "PubMed",
+            "id": "21423176"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005882",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:intermediate filament"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "11889032"
+          },
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "29496907"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0045111",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:intermediate filament cytoskeleton"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:HPA"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005815",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:microtubule organizing center"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "TAS:Reactome"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0016363",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:nuclear matrix"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:UniProtKB-SubCell"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005777",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:peroxisome"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "17881773"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0045335",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:phagocytic vesicle"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:Ensembl"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005886",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:plasma membrane"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "ISS:UniProtKB"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0003725",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:double-stranded RNA binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:MGI"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "21266579"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0042802",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:identical protein binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IPI:IntAct"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000353",
+            "source": "PubMed",
+            "id": "15383276"
+          },
+          {
+            "evidenceCode": "ECO:0000353",
+            "source": "PubMed",
+            "id": "16169070"
+          },
+          {
+            "evidenceCode": "ECO:0000353",
+            "source": "PubMed",
+            "id": "17050693"
+          },
+          {
+            "evidenceCode": "ECO:0000353",
+            "source": "PubMed",
+            "id": "21900206"
+          },
+          {
+            "evidenceCode": "ECO:0000353",
+            "source": "PubMed",
+            "id": "22869704"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:1990254",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:keratin filament binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IPI:AgBase"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000353",
+            "source": "PubMed",
+            "id": "15846844"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0060090",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:molecular adaptor activity"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "EXP:DisProt"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000269",
+            "source": "PubMed",
+            "id": "22869704"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0019904",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:protein domain specific binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IPI:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000353",
+            "source": "PubMed",
+            "id": "21746880"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0097110",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:scaffold protein binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IPI:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000353",
+            "source": "PubMed",
+            "id": "10852826"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005200",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:structural constituent of cytoskeleton"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "11889032"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005212",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:structural constituent of eye lens"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:Ensembl"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0071222",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:cellular response to lipopolysaccharide"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IMP:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000315",
+            "source": "PubMed",
+            "id": "27812135"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0071225",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:cellular response to muramyl dipeptide"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IMP:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000315",
+            "source": "PubMed",
+            "id": "27812135"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0045109",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:intermediate filament organization"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "ISS:UniProtKB"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0032967",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:positive regulation of collagen biosynthetic process"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IMP:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000315",
+            "source": "PubMed",
+            "id": "21746880"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0010628",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:positive regulation of gene expression"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:Ensembl"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0043488",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:regulation of mRNA stability"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IMP:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000315",
+            "source": "PubMed",
+            "id": "21746880"
+          }
+        ]
+      }
+    ],
+    "extraAttributes": {
+      "uniParcId": "UPI00000012EB"
+    }
+  }
+}

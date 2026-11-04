@@ -1,0 +1,65 @@
+# Builds the Streamlit/Reflex.dev app frontend for the Spatial Data 
+# Builder App built in img-extract.yml
+name: img-build-app
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/clinicalomx_pipelines/qptiff_pipeline/src/qptiff_pipeline/build_app.py"
+      - "packages/clinicalomx_pipelines/qptiff_pipeline/src/qptiff_pipeline/build_serve.py"
+      - "packages/clinicalomx_pipelines/qptiff_pipeline/src/qptiff_pipeline/domain/**"
+      - "packages/clinicalomx_pipelines/qptiff_pipeline/Dockerfile.build"
+      - "packages/clinicalomx_pipelines/pyproject.toml"
+      - "packages/clinicalomx_pipelines/rxconfig.py"
+      - "packages/clinicalomx_pipelines/reflex.lock/**"
+      - ".github/workflows/img-build-app.yml"
+  workflow_run:
+    workflows: [release-clinicalomx]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # A failed or cancelled publish left no new wheel on the index, so rebuilding would ship the
+    # same image under a new digest and read as an adoption that did not happen.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # clinicalomx reaches the image as a wheel built from this checkout, never from an index.
+      - uses: astral-sh/setup-uv@v5
+      - name: Build the clinicalomx wheel into the build context
+        working-directory: .
+        run: uv build --wheel --out-dir packages/clinicalomx_pipelines/dist packages/clinicalomx
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/clinicalomx-build-app
+          tags: |
+            type=raw,value=latest
+            type=raw,value=${{ github.sha }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: packages/clinicalomx_pipelines
+          file: packages/clinicalomx_pipelines/qptiff_pipeline/Dockerfile.build
+          push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

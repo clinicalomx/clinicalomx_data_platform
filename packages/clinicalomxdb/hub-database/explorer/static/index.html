@@ -1,0 +1,1423 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Explore - clinicalOMx</title>
+
+<style>
+  /* Deliberately close to the operator portal's own styling: this renders inside one of its
+     tabs, and two visual languages in one frame reads as a bug. */
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #666; --line: #d8d8d8;
+    --panel: #f6f6f6; --accent: #1c5d99; --warn: #8a5300; --warn-bg: #fff6e5;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181c; --fg: #e6e6e6; --muted: #9aa0a6; --line: #33363d;
+      --panel: #1e2127; --accent: #6fb3e0; --warn: #e3b341; --warn-bg: #2a2312;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.5 system-ui, sans-serif; background: var(--bg); color: var(--fg);
+         display: grid; grid-template-columns: 300px 1fr; height: 100vh; }
+  aside { border-right: 1px solid var(--line); overflow-y: auto; background: var(--panel); }
+  main { overflow-y: auto; padding: 16px 20px; min-width: 0; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted);
+       margin: 16px 12px 6px; }
+  details { border-bottom: 1px solid var(--line); }
+  details > summary { cursor: pointer; padding: 7px 12px; font-weight: 600; list-style: none; }
+  details > summary::before { content: "\25B8"; display: inline-block; width: 1em; color: var(--muted); }
+  details[open] > summary::before { content: "\25BE"; }
+  .item { padding: 4px 12px 4px 28px; cursor: pointer; display: flex; justify-content: space-between;
+          gap: 8px; }
+  .item:hover { background: var(--bg); }
+  .item.sel { background: var(--accent); color: #fff; }
+  .count { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px; }
+  .item.sel .count { color: #fff; }
+  .dtype { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 14px; }
+  .tabs button { border: 1px solid transparent; border-bottom: none; background: none;
+                 color: var(--fg); padding: 7px 14px; cursor: pointer; font: inherit;
+                 border-radius: 5px 5px 0 0; }
+  .tabs button[aria-selected=true] { border-color: var(--line); background: var(--panel); font-weight: 600; }
+
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+  select, input, textarea, button.go { font: inherit; padding: 5px 8px; background: var(--bg);
+    color: var(--fg); border: 1px solid var(--line); border-radius: 4px; }
+  textarea { width: 100%; font-family: var(--mono); min-height: 90px; resize: vertical; }
+  button.go { background: var(--accent); color: #fff; border-color: transparent; cursor: pointer;
+              font-weight: 600; padding: 6px 16px; }
+  button.link { background: none; border: none; color: var(--accent); cursor: pointer; font: inherit;
+                text-decoration: underline; padding: 0; }
+  .expr { font-family: var(--mono); font-size: 12px; background: var(--panel); padding: 8px 10px;
+          border-radius: 4px; border: 1px solid var(--line); overflow-x: auto; white-space: pre;
+          margin: 10px 0; }
+  .note { color: var(--muted); font-size: 12px; }
+  .fieldpick { min-width: 320px; }
+  .multi { display: inline-flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+  .multi input { width: 150px; }
+  .combo { position: relative; display: inline-block; }
+  .combo ul { position: absolute; z-index: 20; left: 0; right: 0; top: 100%; margin: 2px 0 0;
+              padding: 0; list-style: none; max-height: 280px; overflow-y: auto;
+              background: var(--bg); border: 1px solid var(--line); border-radius: 4px;
+              box-shadow: 0 4px 14px rgba(0,0,0,.18); }
+  .combo li { padding: 4px 9px; cursor: pointer; display: flex; justify-content: space-between;
+              gap: 14px; }
+  .combo li[aria-selected=true] { background: var(--accent); color: #fff; }
+  .combo li .kind { color: var(--muted); font-size: 11px; white-space: nowrap; }
+  .combo li[aria-selected=true] .kind { color: #fff; }
+  .combo li .no { color: var(--muted); font-style: italic; }
+  .bad { border-color: #b3261e; }
+  .group { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px 4px;
+           margin-bottom: 6px; background: var(--panel); }
+  .group > .head { display: flex; gap: 10px; align-items: baseline; margin-bottom: 6px; }
+  .group > .head .label { font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
+                          color: var(--muted); }
+  .joiner { font-size: 12px; font-weight: 600; color: var(--muted); margin: 0 0 6px 10px; }
+  .scope { display: flex; gap: 8px; align-items: baseline; padding: 2px 12px 6px; }
+  .warn { background: var(--warn-bg); border: 1px solid var(--warn); color: var(--warn);
+          padding: 8px 10px; border-radius: 4px; font-size: 12px; margin-bottom: 10px; }
+  .err { color: #b3261e; font-family: var(--mono); font-size: 12px; white-space: pre-wrap;
+         border: 1px solid #b3261e; border-radius: 4px; padding: 8px 10px; }
+  @media (prefers-color-scheme: dark) { .err { color: #f2b8b5; border-color: #f2b8b5; } }
+
+  .graph { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px;
+           margin-bottom: 10px; background: var(--panel); }
+  .graph .nodes { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .graph .node { border: 1px solid var(--line); border-radius: 5px; padding: 4px 12px;
+                 background: var(--bg); font-size: 13px; }
+  .graph .node small { color: var(--muted); font-size: 11px; margin-left: 6px; }
+  /* The active node is the one thing a watcher is looking for, so it is the only thing that
+     changes colour; visited nodes only change their border. */
+  .graph .node.active { background: var(--accent); color: #fff; border-color: transparent; }
+  .graph .node.active small { color: #fff; }
+  .graph .node.visited { border-color: var(--accent); }
+  .graph .arrow { color: var(--muted); }
+  .graph .arrow.lit { color: var(--accent); font-weight: 700; }
+  #a-steps { margin-top: 8px; display: flex; flex-direction: column; gap: 3px; }
+  .step { font-family: var(--mono); font-size: 11.5px; display: flex; gap: 8px;
+          align-items: baseline; }
+  .step .who { color: var(--muted); min-width: 8.5em; }
+  .step .what { overflow-wrap: anywhere; }
+  .step.bad .what { color: #b3261e; }
+  @media (prefers-color-scheme: dark) { .step.bad .what { color: #f2b8b5; } }
+  #chat { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+  .msg { padding: 7px 11px; border-radius: 8px; max-width: 80ch; white-space: pre-wrap; }
+  .msg.user { align-self: flex-end; background: var(--accent); color: #fff; }
+  .msg.assistant { align-self: flex-start; background: var(--panel);
+                   border: 1px solid var(--line); }
+  .msg.tool { align-self: flex-start; font-family: var(--mono); font-size: 11.5px;
+              color: var(--muted); background: none; border: 1px dashed var(--line);
+              padding: 4px 9px; }
+  .scroll { overflow-x: auto; }
+  img.thumb { height: 64px; width: auto; max-width: 160px; object-fit: contain; display: block;
+              background: var(--panel); border: 1px solid var(--line); border-radius: 3px; }
+  td.img { padding: 3px; }
+  table { border-collapse: collapse; font-size: 13px; }
+  th, td { border: 1px solid var(--line); padding: 4px 8px; text-align: left; white-space: nowrap;
+           max-width: 380px; overflow: hidden; text-overflow: ellipsis; }
+  th { background: var(--panel); position: sticky; top: 0; cursor: grab; user-select: none; }
+  th:active { cursor: grabbing; }
+  th.dragging { opacity: .4; }
+  /* The indicator marks the EDGE the column will land on, not the column it is over, because
+     "before this one" and "after this one" are different drops and a highlight cannot say which. */
+  th.drop-before { box-shadow: inset 3px 0 0 0 var(--accent); }
+  th.drop-after { box-shadow: inset -3px 0 0 0 var(--accent); }
+  tbody tr:hover { background: var(--panel); cursor: pointer; }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 14px; font-size: 13px; }
+  dt { color: var(--muted); font-family: var(--mono); font-size: 12px; }
+  dd { margin: 0; overflow-wrap: anywhere; }
+</style>
+
+<aside>
+  <h2>Entity types</h2>
+  <div id="entities" class="note" style="padding:0 12px">loading...</div>
+  <h2>Registries</h2>
+  <div id="registries" class="note" style="padding:0 12px">loading...</div>
+  <h2>Features</h2>
+  <div id="features" class="note" style="padding:0 12px">loading...</div>
+</aside>
+
+<main>
+  <div id="banner"></div>
+  <div class="tabs" role="tablist">
+    <button id="tab-build" role="tab" aria-selected="true">Build</button>
+    <button id="tab-console" role="tab" aria-selected="false" hidden>Console</button>
+    <button id="tab-agent" role="tab" aria-selected="false">Agent</button>
+  </div>
+
+  <section id="panel-build">
+    <div class="row">
+      <label>Registry <select id="registry"></select></label>
+      <label>merge features
+        <select id="merge-mode">
+          <option value="none">none</option>
+          <option value="all">all on the result</option>
+          <option value="pick">choose...</option>
+        </select>
+      </label>
+      <label>Limit <input type="number" id="limit" value="100" min="1" style="width:90px"></label>
+      <button class="go" id="run">Run query</button>
+      <button class="link" id="copy-link">copy link</button>
+      <a class="link" id="csv" href="#" download>download CSV</a>
+      <label class="note"><input type="checkbox" id="show-internal"> internal columns</label>
+      <label class="note"><input type="checkbox" id="thumbs" checked> thumbnails</label>
+    </div>
+    <div id="merge-picker" hidden class="row"></div>
+    <div id="filters"></div>
+    <div class="row">
+      <button class="link" id="add-group">+ add group</button>
+      <span id="match-wrap" hidden class="note">
+        match
+        <select id="match">
+          <option value="all">all groups (AND)</option>
+          <option value="any">any group (OR)</option>
+        </select>
+      </span>
+    </div>
+    <div class="row">
+      <span class="note">Summarise instead:</span>
+      <select id="agg-op"><option value="">off</option></select>
+      <span id="agg-target-slot"></span>
+      <span class="note" id="agg-note"></span>
+    </div>
+    <div class="expr" id="expr"></div>
+  </section>
+
+  <section id="panel-console" hidden>
+    <div class="warn">
+      <strong>This evaluates Python inside the database container.</strong>
+      It is not sandboxed and is equivalent to a shell there. Use the builder unless you need
+      something it cannot express. Under ADR 0007 this panel is admin-only.
+    </div>
+    <textarea id="expression" spellcheck="false"
+      placeholder='ln.Artifact.filter(cell_type__name="T cell").to_dataframe(include="features")'></textarea>
+    <div class="row">
+      <button class="go" id="run-console">Run</button>
+      <span class="note">One expression, not statements. Results are capped.</span>
+    </div>
+  </section>
+
+  <section id="panel-agent" hidden>
+    <details id="agent-setup">
+      <summary class="note">model connection</summary>
+      <div class="row">
+        <label>provider
+          <select id="a-preset">
+            <option value="">choose...</option>
+            <option value="anthropic">Anthropic</option>
+            <option value="openai">OpenAI</option>
+            <option value="local">local (llama.cpp, vLLM, Ollama)</option>
+          </select>
+        </label>
+        <label>base URL <input id="a-url" size="34" placeholder="https://api.anthropic.com/v1"></label>
+        <label>model <input id="a-model" size="22" placeholder="gpt-4o-mini"></label>
+        <label>API key <input id="a-key" type="password" size="22" placeholder="sk-..."></label>
+        <button class="link" id="a-save">remember in this browser</button>
+        <button class="link" id="a-forget">forget</button>
+      </div>
+      <div class="note" id="a-hint">
+        Any OpenAI-compatible endpoint. The key is held by THIS BROWSER and sent with each
+        request; the service never stores or logs it. The portal has no authentication yet
+        (ADR 0007), so anyone who can reach it can read what this browser remembers.
+      </div>
+    </details>
+
+    <div id="a-graph" class="graph" hidden>
+      <div class="nodes">
+        <span class="node" data-node="start">start</span>
+        <span class="arrow">&rarr;</span>
+        <span class="node" data-node="model">model<small id="n-model"></small></span>
+        <span class="arrow" id="loop">&#8646;</span>
+        <span class="node" data-node="tools">tools<small id="n-tools"></small></span>
+        <span class="arrow">&rarr;</span>
+        <span class="node" data-node="end">end</span>
+      </div>
+      <div class="note" id="a-where">idle</div>
+      <div id="a-steps"></div>
+    </div>
+    <div class="expr" id="a-query" hidden></div>
+    <div id="chat"></div>
+    <div class="row">
+      <input id="a-input" placeholder="ask about the instance, e.g. which studies have qptiff images"
+             style="flex:1; min-width:320px">
+      <button class="go" id="a-send">Send</button>
+      <button class="link" id="a-clear">clear</button>
+      <button class="link" id="a-tobuild">open in Build</button>
+    </div>
+    <div class="note">
+      A prototype. The agent can only call the same validated functions the Build tab calls, so it
+      cannot run arbitrary code and cannot reach anything the builder cannot.
+    </div>
+  </section>
+
+  <div id="status" class="note"></div>
+  <div id="out"></div>
+  <div id="detail"></div>
+</main>
+
+<script>
+// Every URL is relative: Caddy strips the /explore prefix, so the app never knows its mount
+// point. This is why the trailing slash on /explore/ matters.
+const $ = (id) => document.getElementById(id);
+const state = { registry: null, fields: [], groups: [], config: {}, features: [],
+                // Features present on the rows the LAST query matched, or null for "not scoped".
+                // Before a query every registered feature is offered, because which features a
+                // row carries varies per row. After one, offering features that belong to other
+                // data is just noise, which on a real instance is most of the list.
+                scope: null };
+
+function visibleFields() {
+  if (!state.scope) return state.fields;
+  const inScope = new Set(state.scope.map((f) => f.name));
+  const chosen = new Set(allFilters().map((f) => f.field));
+  return state.fields.filter((s) => s.type !== "feature"
+    || inScope.has(s.path)
+    // Never hide a feature that is already being filtered on: it would vanish from its own row.
+    || chosen.has(s.path));
+}
+
+// Distinct values of one field across the CURRENT RESULT, for the value autocomplete. Cached
+// per field-and-filter-set so reopening the same box does not re-query.
+const valueCache = new Map();
+
+async function fetchValues(field, groupIndex, conditionIndex) {
+  if (!field) return [];
+  const p = payload();
+  // What narrows this list depends on the group's connective, and getting it wrong is what made
+  // a second condition on the same column offer only the first one's value.
+  //
+  //   AND group: the siblings genuinely narrow the rows, so they stay; only the condition being
+  //              edited is dropped, since keeping it collapses the list to the value already
+  //              chosen and it could then never be changed.
+  //   OR group:  the siblings are ALTERNATIVES, not conjunctions. study=A does not restrict what
+  //              study= could also be, so the whole group is dropped and the list comes from the
+  //              other groups alone.
+  const groups = p.groups
+    .map((g, gi) => {
+      if (gi !== groupIndex) return g;
+      if (g.match === "any") return null;
+      return { match: g.match,
+               filters: g.filters.filter((_, ci) => ci !== conditionIndex) };
+    })
+    .filter((g) => g && g.filters.length);
+  const key = JSON.stringify([p.registry, p.match, field, groups]);
+  if (valueCache.has(key)) return valueCache.get(key);
+  const res = await api("api/values", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ registry: p.registry, groups, match: p.match, field }),
+  });
+  const items = res.values.map((v) => ({ path: v, kind: "" }));
+  if (res.truncated) items.push({ path: "", kind: "more values than can be listed" });
+  valueCache.set(key, items);
+  return items;
+}
+
+function scopedValues(spec) {
+  if (spec.type === "feature" && state.scope) {
+    const hit = state.scope.find((f) => f.name === spec.path);
+    // Observed values beat permitted values: shorter, and they say what is actually there.
+    if (hit && hit.values && hit.values.length) return hit.values;
+  }
+  return spec.values;
+}
+
+async function api(path, options) {
+  const res = await fetch(path, options);
+  const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+  if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+  return body;
+}
+
+// A combobox rather than a datalist. A datalist option renders inconsistently across browsers:
+// setting `label` makes Chrome show the label INSTEAD of the value, so the list read "feature str"
+// with no field names in it. Owning the rendering removes the guesswork, and it is also the only
+// way to show a name and its kind side by side, which is the distinction that matters when a
+// feature and a column can share a name.
+function combobox(input, source, onPick) {
+  const wrap = el("span", { className: "combo" });
+  wrap.append(input);
+  const list = el("ul", { hidden: true });
+  wrap.append(list);
+  let active = -1, shown = [], items = Array.isArray(source) ? source : null, loading = false;
+
+  const close = () => { list.hidden = true; active = -1; };
+  const note = (text) => {
+    list.textContent = "";
+    list.append(el("li", {}, el("span", { className: "no", textContent: text })));
+    list.hidden = false;
+  };
+  // An async source is fetched once, on first focus. Not up front: the values of a field are a
+  // query against the current result, and running one for every field on the chance it is
+  // opened would be a query storm against an instance tuned for connection exhaustion.
+  const load = async () => {
+    if (items || loading) return;
+    loading = true;
+    note("loading...");
+    try { items = await source(); } catch (e) { items = []; note(e.message); return; }
+    finally { loading = false; }
+    render(input.value);
+  };
+  const render = (q) => {
+    if (!items) { load(); return; }
+    const needle = q.trim().toLowerCase();
+    shown = items.filter((it) => it.path.toLowerCase().includes(needle)).slice(0, 200);
+    list.textContent = "";
+    if (!shown.length) {
+      list.append(el("li", {}, el("span", { className: "no", textContent: "no match" })));
+    }
+    shown.forEach((it, idx) => {
+      const li = el("li", { role: "option" });
+      li.setAttribute("aria-selected", String(idx === active));
+      li.append(el("span", { textContent: it.path }),
+                el("span", { className: "kind", textContent: it.kind }));
+      // mousedown, not click: blur fires first on click and would close the list underneath.
+      li.onmousedown = (e) => { e.preventDefault(); pick(it); };
+      list.append(li);
+    });
+    list.hidden = false;
+  };
+  const pick = (it) => { input.value = it.path; close(); onPick(it); };
+  const move = (d) => {
+    if (list.hidden) return render(input.value);
+    active = Math.max(0, Math.min(shown.length - 1, active + d));
+    [...list.children].forEach((li, i) => li.setAttribute("aria-selected", String(i === active)));
+    list.children[active]?.scrollIntoView({ block: "nearest" });
+  };
+
+  input.oninput = () => { active = -1; render(input.value); };
+  input.onfocus = () => render(input.value);
+  input.onblur = () => setTimeout(close, 120);
+  input.onkeydown = (e) => {
+    if (e.key === "ArrowDown") { e.preventDefault(); move(1); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); move(-1); }
+    else if (e.key === "Enter") {
+      e.preventDefault();
+      if (active >= 0 && shown[active]) pick(shown[active]);
+      else if (shown.length === 1) pick(shown[0]);
+      else onPick(null);
+    } else if (e.key === "Escape") { close(); }
+  };
+  return wrap;
+}
+
+function fieldItems() {
+  return visibleFields().map((s) => ({
+    path: s.path,
+    kind: s.type === "feature"
+      ? (s.shadowed ? "feature - shadowed by a column" : `feature ${s.dtype || ""}`.trim())
+      : s.type === "relation" ? "relation" : "field",
+    spec: s,
+  }));
+}
+
+function el(tag, props = {}, ...kids) {
+  const n = Object.assign(document.createElement(tag), props);
+  for (const k of kids) n.append(k);
+  return n;
+}
+
+// --- sidebar ----------------------------------------------------------------
+function group(host, rows, render) {
+  host.textContent = "";
+  if (!rows.length) { host.append(el("div", { className: "note", textContent: "none" })); return; }
+  for (const r of rows) host.append(render(r));
+}
+
+function sidebarItem(label, count, onclick, extra) {
+  const node = el("div", { className: "item", onclick });
+  node.append(el("span", { textContent: label }));
+  if (extra) node.append(el("span", { className: "dtype", textContent: extra }));
+  if (count !== null && count !== undefined) {
+    node.append(el("span", { className: "count", textContent: String(count) }));
+  }
+  return node;
+}
+
+async function loadSidebar() {
+  const [regs, feats, ents, cfg] = await Promise.all([
+    api("api/registries"), api("api/features"), api("api/entities"), api("api/config"),
+  ]);
+  state.config = cfg;
+  state.features = feats;
+
+  // No instance means every count is null and the page reads as an empty database. Say which
+  // problem it is, because the fix is completely different.
+  if (!cfg.instance) {
+    $("banner").append(el("div", { className: "warn" },
+      "No LaminDB instance is connected, so nothing below reflects real data. " +
+      "On the VM this means the ~/.lamin mount is empty; locally, run make lamin-local."));
+  }
+
+  // Entity types are ln.Record rows, so selecting one is a Record query filtered by type name.
+  group($("entities"), ents, (e) => sidebarItem(e.name, e.count, () => {
+    selectRegistry("Record").then(() => {
+      setSingleFilter({ field: "type__name", lookup: "exact", value: e.name });
+      renderFilters(); run();
+    });
+  }));
+
+  group($("registries"), regs, (r) =>
+    sidebarItem(r.name, r.count, () => selectRegistry(r.name).then(run), r.module === "bionty" ? "bionty" : ""));
+
+  renderFeatureList();
+
+  const sel = $("registry");
+  for (const r of regs) sel.append(el("option", { value: r.name, textContent: r.name }));
+
+  for (const op of cfg.aggregates || []) {
+    $("agg-op").append(el("option", { value: op, textContent: op }));
+  }
+  if (cfg.console) $("tab-console").hidden = false;
+  if (cfg.agent === false) {
+    $("tab-agent").disabled = true;
+    $("tab-agent").title = "this image was built before the agent dependencies; run make db-build";
+  }
+  loadAgentSettings();
+  $("limit").value = cfg.default_rows;
+  $("limit").max = cfg.max_rows;
+  state.groups = [newGroup([])];
+  await applyUrl();
+}
+
+// A query is linkable: ?registry=Record&f=type__name:exact:Patient&features=1&limit=50
+// The tab is framed by the portal, so the address bar shows the portal rather than this page;
+// "copy link" is what makes a query shareable, and the same parsing makes any query reachable
+// from a bookmark or a runbook.
+async function applyUrl() {
+  const p = new URLSearchParams(location.search);
+  await selectRegistry(p.get("registry") || "Artifact");
+  // f=<group>:<field>:<lookup>:<value>, the group index optional so links written before
+  // grouping existed still load: a first segment that is not a number means group 0.
+  const byGroup = new Map();
+  for (const raw of p.getAll("f")) {
+    let rest = raw, gi = 0;
+    const head = raw.slice(0, raw.indexOf(":"));
+    if (/^\d+$/.test(head)) { gi = Number(head); rest = raw.slice(head.length + 1); }
+    const [field, lookup, ...tail] = rest.split(":");
+    if (!state.fields.some((s) => s.path === field)) continue;
+    if (!byGroup.has(gi)) byGroup.set(gi, []);
+    byGroup.get(gi).push({ field, lookup: lookup || "exact", value: tail.join(":") });
+  }
+  const modes = new Map();
+  for (const raw of p.getAll("gm")) {
+    const [gi, mode] = raw.split(":");
+    if (/^\d+$/.test(gi)) modes.set(Number(gi), mode || "all");
+  }
+  const loaded = [...byGroup.keys()].sort((a, b) => a - b)
+    .map((gi) => ({ match: modes.get(gi) || "all", filters: byGroup.get(gi) }));
+  if (loaded.length) state.groups = loaded;
+  if (p.get("features")) $("merge-mode").value = "all";
+  if (p.get("merge")) {
+    $("merge-mode").value = "pick";
+    state.pendingMerge = p.get("merge").split(",");
+  }
+  if (p.get("match")) $("match").value = p.get("match");
+  if (p.get("limit")) $("limit").value = p.get("limit");
+  renderFilters();
+  renderMergePicker();
+  if (state.pendingMerge) {
+    for (const box of $("merge-picker").querySelectorAll("input")) {
+      box.checked = state.pendingMerge.includes(box.value);
+    }
+    state.pendingMerge = null;
+  }
+  rebuildAggList();
+  if (p.has("run") || filters.length) await run();
+}
+
+function currentUrl() {
+  const p = new URLSearchParams();
+  p.set("registry", state.registry);
+  state.groups.forEach((g, gi) => {
+    for (const f of g.filters.filter((x) => x.field)) {
+      const v = valueOf(f);
+      p.append("f", `${gi}:${f.field}:${f.lookup}:${Array.isArray(v) ? v.join(",") : v}`);
+    }
+    if (g.match !== "all" && g.filters.length > 1) p.append("gm", `${gi}:${g.match}`);
+  });
+  if ($("merge-mode").value === "all") p.set("features", "1");
+  const picked = mergePicked();
+  if (picked.length) p.set("merge", picked.join(","));
+  if ($("match").value !== "all") p.set("match", $("match").value);
+  p.set("limit", $("limit").value);
+  p.set("run", "1");
+  return `${location.origin}${location.pathname}?${p}`;
+}
+
+// --- builder ----------------------------------------------------------------
+async function selectRegistry(name) {
+  // Scope belongs to a result set of one registry; carrying it across would filter the new
+  // registry's features by names that came from somewhere else.
+  if (name !== state.registry) state.scope = null;
+  state.registry = name;
+  $("registry").value = name;
+  state.fields = await api(`api/registry/${encodeURIComponent(name)}/fields`);
+  state.groups = [newGroup([])];
+  renderFilters();
+}
+
+// Two levels, deliberately: an outer connective joining groups and an inner one joining the
+// conditions in each. That expresses f1 AND (f2 OR f3), which one global mode cannot, without
+// the ambiguity of per-row connectives where AND binds tighter than OR and the obvious reading
+// of "a AND b OR c" is the wrong one.
+function allFilters() {
+  return state.groups.flatMap((g) => g.filters);
+}
+
+function newGroup(filters) {
+  return { match: "all", filters: filters || [] };
+}
+
+function blankFilter() {
+  const first = state.fields.find((f) => f.path === "name")
+    || state.fields.find((f) => f.path === "key") || state.fields[0];
+  return { field: first ? first.path : "", lookup: "exact", value: "" };
+}
+
+// Replace every filter with a single condition. Used by the sidebar shortcuts, which mean
+// "start a new query from this", not "add to whatever is there".
+function setSingleFilter(filter) {
+  state.groups = [newGroup([filter])];
+}
+
+function renderFilters() {
+  const host = $("filters");
+  host.textContent = "";
+  state.groups.forEach((group, gi) => {
+    if (gi > 0) {
+      host.append(el("div", { className: "joiner",
+        textContent: $("match").value === "any" ? "OR" : "AND" }));
+    }
+    host.append(renderGroup(group, gi));
+  });
+  // The outer connective only means something with more than one group.
+  $("match-wrap").hidden = state.groups.length < 2;
+  updateExpr();
+}
+
+function renderGroup(group, gi) {
+  const box = el("div", { className: "group" });
+  const head = el("div", { className: "head" });
+  head.append(el("span", { className: "label", textContent: `group ${gi + 1}` }));
+  if (group.filters.length > 1) {
+    const inner = el("select");
+    for (const [v, t] of [["all", "all conditions (AND)"], ["any", "any condition (OR)"]]) {
+      inner.append(el("option", { value: v, textContent: t, selected: group.match === v }));
+    }
+    inner.onchange = () => { group.match = inner.value; renderFilters(); };
+    head.append(el("span", { className: "note" }, document.createTextNode("match "), inner));
+  }
+  if (state.groups.length > 1) {
+    head.append(el("button", { className: "link", textContent: "remove group",
+      onclick: () => { state.groups.splice(gi, 1); renderFilters(); } }));
+  }
+  box.append(head);
+
+  group.filters.forEach((f, i) => box.append(renderCondition(group, gi, f, i)));
+  box.append(el("div", { className: "row" },
+    el("button", { className: "link", textContent: "+ add condition",
+      onclick: () => { group.filters.push(blankFilter()); renderFilters(); } })));
+  return box;
+}
+
+// "in" holds a LIST. One comma-separated box was the previous arrangement and it is a bad fit:
+// a value containing a comma cannot be expressed, the autocomplete cannot help with any entry
+// after the first, and there is no sign that more than one value is even allowed.
+function multiValue(f, gi, i) {
+  if (!Array.isArray(f.values)) {
+    // Carry across whatever the box held when the lookup changed, so switching exact -> in keeps
+    // the value already typed rather than discarding it.
+    f.values = f.value ? String(f.value).split(",").map((v) => v.trim()).filter(Boolean) : [];
+  }
+  if (!f.values.length) f.values.push("");
+
+  const wrap = el("span", { className: "multi" });
+  const redraw = () => { const fresh = multiValue(f, gi, i); wrap.replaceWith(fresh); };
+  f.values.forEach((v, vi) => {
+    const box = el("input", { value: v, placeholder: `value ${vi + 1}`,
+                              oninput: () => { f.values[vi] = box.value; updateExpr(); } });
+    const combo = combobox(box, () => fetchValues(f.field, gi, i), (it) => {
+      if (it) { f.values[vi] = it.path; box.value = it.path; }
+      updateExpr();
+    });
+    wrap.append(combo);
+    if (f.values.length > 1) {
+      wrap.append(el("button", { className: "link", textContent: "x", title: "remove this value",
+        onclick: () => { f.values.splice(vi, 1); updateExpr(); redraw(); } }));
+    }
+  });
+  wrap.append(el("button", { className: "link", textContent: "+", title: "add another value",
+    onclick: () => { f.values.push(""); updateExpr(); redraw(); } }));
+  return wrap;
+}
+
+// The operand to send, and to show. "in" carries a list; everything else a single value.
+function valueOf(f) {
+  return f.lookup === "in"
+    ? (f.values || []).filter((v) => v !== "")
+    : (f.value === undefined ? "" : f.value);
+}
+
+function renderCondition(group, gi, f, i) {
+  const row = el("div", { className: "row" });
+
+  const field = el("input", { value: f.field, placeholder: "search fields and features",
+                              className: "fieldpick", spellcheck: false });
+  const commit = () => {
+    const spec = state.fields.find((x) => x.path === field.value.trim());
+    if (!spec) { field.classList.add("bad"); return; }
+    field.classList.remove("bad");
+    f.field = spec.path;
+    if (!spec.lookups.includes(f.lookup)) f.lookup = spec.lookups[0] || "exact";
+    renderFilters();
+  };
+  const combo = combobox(field, fieldItems(), commit);
+
+  const spec = state.fields.find((s) => s.path === f.field) || { lookups: ["exact"] };
+  const lookup = el("select");
+  for (const lk of spec.lookups) {
+    lookup.append(el("option", { value: lk,
+      textContent: lk === "isset" ? "is set" : lk === "notset" ? "is not set" : lk,
+      selected: lk === f.lookup }));
+  }
+  lookup.onchange = () => { f.lookup = lookup.value; renderFilters(); };
+
+  let valueNode;
+  if (f.lookup === "isset" || f.lookup === "notset") {
+    valueNode = el("span");                     // no operand: see the lookup list
+  } else if (f.lookup === "in") {
+    valueNode = multiValue(f, gi, i);
+  } else {
+    const value = el("input", { value: valueOf(f), placeholder: "value",
+                                oninput: () => { f.value = value.value; updateExpr(); } });
+    valueNode = combobox(value, () => fetchValues(f.field, gi, i), (it) => {
+      if (it) { f.value = it.path; value.value = it.path; }
+      updateExpr();
+    });
+  }
+
+  const hint = el("span", { className: "note",
+    textContent: spec.type === "feature" ? (spec.dtype || "feature") : "" });
+  row.append(combo, lookup, valueNode, hint,
+    el("button", { className: "link", textContent: "remove",
+      onclick: () => {
+        group.filters.splice(i, 1);
+        // A group with nothing in it is not a filter, it is clutter; drop it, unless it is the
+        // only one, which stays as the empty starting point.
+        if (!group.filters.length && state.groups.length > 1) state.groups.splice(gi, 1);
+        renderFilters();
+      } }));
+  return row;
+}
+
+
+
+// Which feature columns to merge. Empty means none, or means "all" is doing the choosing.
+function mergePicked() {
+  return [...$("merge-picker").querySelectorAll("input:checked")].map((i) => i.value);
+}
+
+function renderMergePicker() {
+  const host = $("merge-picker");
+  const mode = $("merge-mode").value;
+  host.hidden = mode !== "pick";
+  if (mode !== "pick") { host.textContent = ""; updateExpr(); return; }
+  const chosen = new Set(mergePicked());
+  host.textContent = "";
+  // Scoped features when a query has run, since those are the ones these rows actually carry;
+  // every registered feature before that, because nothing is known yet.
+  const available = state.scope
+    ? state.scope.map((f) => f.name)
+    : state.fields.filter((f) => f.type === "feature" && !f.shadowed).map((f) => f.path);
+  if (!available.length) {
+    host.append(el("span", { className: "note", textContent: "no features available" }));
+    return;
+  }
+  for (const name of available) {
+    const box = el("input", { type: "checkbox", value: name, checked: chosen.has(name) });
+    box.onchange = updateExpr;
+    host.append(el("label", { className: "note" }, box, document.createTextNode(" " + name)));
+  }
+  updateExpr();
+}
+
+function payload() {
+  return {
+    registry: state.registry,
+    groups: state.groups
+      .map((g) => ({ match: g.match, filters: g.filters
+        .filter((f) => f.field)
+        // An unfinished "in" has no values yet; sending it would be an error rather than a
+        // filter, so it simply is not a condition until it has one.
+        .filter((f) => !(f.lookup === "in") || valueOf(f).length)
+        .map((f) => ({ field: f.field, lookup: f.lookup, value: valueOf(f) })) }))
+      .filter((g) => g.filters.length),
+    features: $("merge-mode").value === "all",
+    feature_columns: mergePicked(),
+    match: $("match").value,
+    limit: Number($("limit").value) || state.config.default_rows,
+  };
+}
+
+function updateExpr() {
+  const p = payload();
+  // A preview only. The server returns the real expression with the query, including which of
+  // the three OR routes it had to take, and that replaces this the moment a query runs.
+  const term = (f) => {
+    if (f.lookup === "in") return `${f.field}__in=${JSON.stringify(f.value)}`;
+    if (f.lookup === "isset" || f.lookup === "notset")
+      return `${f.field}__isnull=${f.lookup === "notset" ? "True" : "False"}`;
+    return `${f.lookup === "exact" ? f.field : f.field + "__" + f.lookup}=${JSON.stringify(f.value)}`;
+  };
+  const tail = p.features ? 'to_dataframe(include="features")'
+    : p.feature_columns.length ? `to_dataframe()  # merged: ${p.feature_columns.join(", ")}`
+    : "to_dataframe()";
+  const render = (g) => {
+    const parts = g.filters.map(term);
+    return g.match === "any" && parts.length > 1
+      ? "(" + parts.join(" OR ") + ")" : parts.join(" AND ");
+  };
+  // A readable sketch, not the call. The server returns the real expression with the query,
+  // including which id-union route a feature OR forced it to take, and that replaces this.
+  const body = p.groups.length
+    ? " where " + p.groups.map(render).join(p.match === "any" ? " OR " : " AND ")
+    : "";
+  $("expr").textContent =
+    `ln.${p.registry}${body}   ->   [:${p.limit}].${tail}`;
+  updateCsvLink();
+}
+
+async function run() {
+  const op = $("agg-op").value;
+  state.lastKind = op ? "aggregate" : "query";
+  if (!op) {
+    await execute(() => api("api/query", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload()),
+    }));
+    return;
+  }
+  // An aggregate runs over the WHOLE result set, so the row limit does not apply and saying so
+  // matters: "max size = 4GB" means something different if it is the max of the first 100 rows.
+  const p = payload();
+  await execute(() => api("api/aggregate", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ registry: p.registry, groups: p.groups, match: p.match,
+                           target: aggTarget ? aggTarget.value.trim() : "", op }),
+  }));
+}
+
+async function runConsole() {
+  state.lastKind = "console";
+  await execute(() => api("api/console", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ expression: $("expression").value,
+                           limit: Number($("limit").value) || state.config.default_rows }),
+  }));
+}
+
+async function execute(fn) {
+  $("status").textContent = "running...";
+  $("out").textContent = ""; $("detail").textContent = "";
+  try {
+    const res = await fn();
+    applyScope(res);
+    renderTable(res);
+  } catch (e) {
+    $("status").textContent = "";
+    $("out").append(el("div", { className: "err", textContent: e.message }));
+  }
+}
+
+function applyScope(res) {
+  // Only the builder reports scope; the console has no structured filters to scope by.
+  if (!("features_in_scope" in res)) return;
+  state.scope = res.features_in_scope;
+  renderFeatureList();
+  renderFilters();
+  renderMergePicker();
+  rebuildAggList();
+}
+
+function renderFeatureList() {
+  const host = $("features");
+  const scoped = state.scope;
+  const rows = scoped
+    ? scoped.map((f) => ({ ...f, values: f.values }))
+    : state.features;
+
+  host.textContent = "";
+  if (scoped) {
+    const bar = el("div", { className: "scope" });
+    bar.append(el("span", { className: "note",
+      textContent: `${rows.length} on the current result` }));
+    bar.append(el("button", { className: "link", textContent: "show all",
+      onclick: () => { state.scope = null; renderFeatureList(); renderFilters(); } }));
+    host.append(bar);
+  }
+  if (!rows.length) {
+    host.append(el("div", { className: "note", style: "padding:0 12px",
+      textContent: scoped ? "these rows carry no features" : "none" }));
+    return;
+  }
+  for (const f of rows) host.append(featureNode(f));
+}
+
+function featureNode(f) {
+  const d = el("details");
+  d.append(el("summary", { textContent: f.name }));
+  const body = el("div", { className: "note", style: "padding:0 12px 8px 28px" },
+    el("div", { className: "dtype", textContent: f.dtype || "no dtype" }),
+    el("div", {
+      textContent: f.values === null ? "free text"
+        : f.values.length ? f.values.join(", ")
+        : "no values recorded",
+    }));
+  // Which artifacts carry this feature at all is the first question one asks of a feature that
+  // only some artifacts have, so it is one click rather than four.
+  body.append(el("div", {}, el("button", {
+    className: "link", textContent: "artifacts that have it",
+    onclick: () => selectRegistry("Artifact").then(() => {
+      setSingleFilter({ field: f.name, lookup: "isset", value: "" });
+      renderFilters(); run();
+    }),
+  })));
+  d.append(body);
+  return d;
+}
+
+// Which producer made the current result decides how CSV is built. A row query exports from the
+// server so the file holds the WHOLE result set rather than the displayed page. An aggregate or a
+// console result is already complete in the browser, and re-running it server-side would either
+// duplicate work or, for the console, mean evaluating the expression twice.
+// The link's href IS the export, so clicking it is an ordinary browser download. Rebuilt
+// whenever the query changes, which is also why it is never stale.
+function updateCsvLink() {
+  const a = $("csv");
+  const p = payload();
+  const q = new URLSearchParams();
+  q.set("registry", p.registry);
+  p.groups.forEach((g, gi) => {
+    for (const f of g.filters) {
+      q.append("f", `${gi}:${f.field}:${f.lookup}:` +
+        (Array.isArray(f.value) ? f.value.join(",") : f.value));
+    }
+    if (g.match !== "all" && g.filters.length > 1) q.append("gm", `${gi}:${g.match}`);
+  });
+  if (p.features) q.set("features", "1");
+  if (p.feature_columns.length) q.set("merge", p.feature_columns.join(","));
+  if (p.match !== "all") q.set("match", p.match);
+  if (state.last && state.lastKind === "query") q.set("cols", visibleColumns(state.last).join(","));
+  a.href = `api/export.csv?${q}`;
+  // An aggregate or console result cannot be reproduced from a URL: the server has no way to
+  // re-derive a console expression, and re-running it would evaluate it twice. Those export
+  // from the browser instead, where the result already is.
+  a.textContent = state.lastKind && state.lastKind !== "query"
+    ? `download CSV (${state.lastKind})` : "download CSV";
+}
+
+function csvClicked(event) {
+  if (state.lastKind === "query" || !state.last) return;   // let the link do its job
+  event.preventDefault();
+  const cols = visibleColumns(state.last);
+  const idx = cols.map((c) => state.last.columns.indexOf(c));
+  const csv = [cols, ...state.last.rows.map((r) => idx.map((i) => r[i]))]
+    .map((row) => row.map(quote).join(",")).join("\n");
+  save(new Blob([csv], { type: "text/csv" }), `${state.registry.toLowerCase()}-${state.lastKind}.csv`);
+  $("status").textContent = `exported ${state.last.rows.length} rows`;
+}
+
+// RFC 4180 quoting. A key or a description containing a comma or a newline is ordinary here, and
+// unquoted output would shift every later column in the row.
+function quote(v) {
+  const s = v == null ? "" : String(v);
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+// The user's column order, per registry, remembered across queries and reloads. Kept as names
+// rather than positions so it survives a query returning a different set of columns.
+const COLUMN_ORDER_KEY = "ops-explore-columns";
+
+function loadColumnOrder() {
+  try { return JSON.parse(localStorage.getItem(COLUMN_ORDER_KEY) || "{}"); }
+  catch (e) { return {}; }
+}
+
+function saveColumnOrder(order) {
+  try { localStorage.setItem(COLUMN_ORDER_KEY, JSON.stringify(order)); }
+  catch (e) { /* private mode: the order still applies for this session */ }
+}
+
+// Every column of the result, in the user's order. Columns they have never moved keep their
+// natural position relative to each other and follow the ones they have, so a newly merged
+// feature appears at the end rather than somewhere arbitrary.
+function orderedColumns(res) {
+  const preferred = loadColumnOrder()[state.registry] || [];
+  const rank = (c) => {
+    const i = preferred.indexOf(c);
+    return i === -1 ? preferred.length + res.columns.indexOf(c) : i;
+  };
+  return [...res.columns].sort((a, b) => rank(a) - rank(b));
+}
+
+function visibleColumns(res) {
+  return orderedColumns(res).filter((c) => $("show-internal").checked || !/_id$/.test(c));
+}
+
+// Move `from` to sit immediately before or after `to`, and remember it. Operates on the FULL
+// column list, not the visible one, so hiding the internal columns and showing them again does
+// not scramble what was arranged.
+function moveColumn(res, from, to, after) {
+  if (!from || from === to) return;
+  const order = orderedColumns(res);
+  order.splice(order.indexOf(from), 1);
+  const target = order.indexOf(to);
+  order.splice(after ? target + 1 : target, 0, from);
+  const all = loadColumnOrder();
+  all[state.registry] = order;
+  saveColumnOrder(all);
+  renderTable(res);
+}
+
+function resetColumnOrder() {
+  const all = loadColumnOrder();
+  delete all[state.registry];
+  saveColumnOrder(all);
+  if (state.last) renderTable(state.last);
+}
+
+let dragColumn = null;
+
+function save(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = Object.assign(document.createElement("a"), { href: url, download: filename });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function renderTable(res) {
+  state.last = res;
+  // The result changed, so every "values within the current result" list is now stale.
+  valueCache.clear();
+  updateCsvLink();
+  $("out").textContent = "";
+  $("status").textContent =
+    `${res.count} row${res.count === 1 ? "" : "s"} in ${res.elapsed}s` +
+    (res.truncated ? " (truncated at the limit)" : "");
+  if ((loadColumnOrder()[state.registry] || []).length) {
+    $("status").append(document.createTextNode("  "),
+      el("button", { className: "link", textContent: "reset column order",
+                     onclick: resetColumnOrder }));
+  }
+  if (res.expression) $("expr").textContent = res.expression;
+  // A partial result is still a result, but it must say what is missing from it.
+  if (res.warning) $("out").append(el("div", { className: "warn", textContent: res.warning }));
+  if (res.images_omitted) {
+    $("out").append(el("div", { className: "warn", textContent:
+      `${res.images_omitted} image cell(s) were larger than the limit and were not sent. ` +
+      "Those are not thumbnails; fetch the artifact itself instead." }));
+  }
+  if (!res.rows.length) return;
+
+  // Foreign-key columns are the row's plumbing, not its content: a table of branch_id and
+  // space_id pushes name and created_at off the screen. Hidden unless asked for, and never
+  // dropped server-side, so "internal columns" shows what is really there.
+  const uidCol = res.columns.indexOf("uid");
+  const keep = visibleColumns(res).map((c) => res.columns.indexOf(c));
+
+  const table = el("table");
+  const head = el("tr");
+  for (const i of keep) {
+    const name = res.columns[i];
+    const th = el("th", { textContent: name, draggable: true,
+                          title: "drag to reorder" });
+    const clear = () => th.classList.remove("drop-before", "drop-after", "dragging");
+    th.ondragstart = (e) => {
+      dragColumn = name;
+      th.classList.add("dragging");
+      // Guarded: a synthetic event dispatched by a test has no dataTransfer, and the move does
+      // not depend on it anyway -- dragColumn is what carries the source.
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", name);
+      }
+    };
+    th.ondragend = clear;
+    th.ondragover = (e) => {
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+      // Which half of the header the pointer is over decides which side it lands on.
+      const box = th.getBoundingClientRect();
+      const after = e.clientX > box.left + box.width / 2;
+      th.classList.toggle("drop-before", !after);
+      th.classList.toggle("drop-after", after);
+    };
+    th.ondragleave = clear;
+    th.ondrop = (e) => {
+      e.preventDefault();
+      const box = th.getBoundingClientRect();
+      const after = e.clientX !== undefined && e.clientX > box.left + box.width / 2;
+      clear();
+      moveColumn(res, dragColumn, name, after);
+      dragColumn = null;
+    };
+    head.append(th);
+  }
+  table.append(el("thead", {}, head));
+
+  // The server sends complete data URIs, so a cell either is one or is not; the page needs no
+  // knowledge of image formats and a mixed column cannot mislabel a row.
+  const images = new Set($("thumbs").checked ? (res.image_columns || []) : []);
+  const body = el("tbody");
+  for (const row of res.rows) {
+    const tr = el("tr");
+    for (const i of keep) {
+      if (images.has(res.columns[i]) && row[i].startsWith("data:")) {
+        // Opening the cell must not also open the row detail, hence stopPropagation.
+        const img = el("img", { className: "thumb", src: row[i],
+                                alt: res.columns[i], loading: "lazy" });
+        img.onclick = (e) => { e.stopPropagation(); window.open(img.src, "_blank"); };
+        tr.append(el("td", { className: "img" }, img));
+      } else {
+        tr.append(el("td", { textContent: row[i], title: row[i] }));
+      }
+    }
+    if (uidCol >= 0) tr.onclick = () => showDetail(state.registry, row[uidCol]);
+    body.append(tr);
+  }
+  table.append(body);
+  $("out").append(el("div", { className: "scroll" }, table));
+}
+
+async function showDetail(registry, uid) {
+  const host = $("detail");
+  host.textContent = "loading...";
+  try {
+    const d = await api(`api/record/${encodeURIComponent(registry)}/${encodeURIComponent(uid)}`);
+    host.textContent = "";
+    host.append(el("h3", { textContent: `${d.registry} ${d.uid}` }));
+    const dl = el("dl");
+    for (const [k, v] of Object.entries(d.fields)) {
+      dl.append(el("dt", { textContent: k }), el("dd", { textContent: v || "-" }));
+    }
+    for (const [k, v] of Object.entries(d.relations)) {
+      dl.append(el("dt", { textContent: k }), el("dd", { textContent: v.join(", ") }));
+    }
+    host.append(dl);
+  } catch (e) {
+    host.textContent = "";
+    host.append(el("div", { className: "err", textContent: e.message }));
+  }
+}
+
+// --- agent ------------------------------------------------------------------
+// The transcript lives in the page, and is posted back whole each turn. The service keeps no
+// conversation state: a server-side store would need eviction, would grow with every abandoned
+// tab, and would put the transcript somewhere the user can neither see nor clear.
+const AGENT_KEY = "ops-explore-agent";
+let chat = [];
+// The query the agent is refining. Sent back each turn, so "now only STUDY-A" narrows what is
+// already there instead of starting again.
+let agentQuery = null;
+
+// Presets rather than asking someone to remember a base URL. Anthropic first because it is what
+// this is being tried with; its OpenAI-compatible endpoint speaks the same wire format, so the
+// only difference from OpenAI is these two strings.
+const PRESETS = {
+  anthropic: { url: "https://api.anthropic.com/v1", model: "claude-sonnet-5",
+               hint: "Anthropic's OpenAI-compatible endpoint. Use an Anthropic key (sk-ant-...)." },
+  openai: { url: "https://api.openai.com/v1", model: "gpt-4o-mini",
+            hint: "OpenAI. Use an OpenAI key (sk-...)." },
+  local: { url: "http://host.docker.internal:8000/v1", model: "",
+           hint: "A model served on the VM host, or reverse-tunnelled to it with " +
+                 "make tunnel-model. host.docker.internal is the VM itself: the URL resolves " +
+                 "inside the explorer container, whose own 127.0.0.1 is never the host's. " +
+                 "Most local servers need no key; the model name is whatever it serves." },
+};
+
+function applyPreset() {
+  const preset = PRESETS[$("a-preset").value];
+  if (!preset) return;
+  $("a-url").value = preset.url;
+  if (preset.model) $("a-model").value = preset.model;
+  $("a-hint").textContent = preset.hint +
+    " The key is held by THIS BROWSER and sent with each request; the service never stores or " +
+    "logs it. The portal has no authentication yet (ADR 0007), so anyone who can reach it can " +
+    "read what this browser remembers.";
+}
+
+function agentSettings() {
+  return { base_url: $("a-url").value.trim(), model: $("a-model").value.trim(),
+           api_key: $("a-key").value };
+}
+
+function loadAgentSettings() {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(AGENT_KEY) || "{}"); } catch (e) { /* ignore */ }
+  $("a-url").value = saved.base_url || "";
+  $("a-model").value = saved.model || "";
+  $("a-key").value = saved.api_key || "";
+  // Open the connection panel when there is nothing to connect with, since the first question
+  // would otherwise fail for a reason that is not on screen.
+  $("agent-setup").open = !saved.base_url;
+}
+
+function renderChat() {
+  const host = $("chat");
+  host.textContent = "";
+  // The conversation only, not the machinery. Tool calls and their results are the graph
+  // panel's job and were shown twice; a transcript of what the agent DID buries what it SAID,
+  // which is the part being read.
+  for (const m of chat) {
+    if (m.role === "tool") continue;
+    if (m.content) host.append(el("div", { className: `msg ${m.role}`, textContent: m.content }));
+  }
+  host.scrollTop = host.scrollHeight;
+}
+
+// --- the graph view ---------------------------------------------------------------------------
+const counts = { model: 0, tools: 0 };
+
+function resetGraph() {
+  counts.model = counts.tools = 0;
+  for (const n of document.querySelectorAll(".graph .node")) {
+    n.classList.remove("active", "visited");
+  }
+  for (const a of document.querySelectorAll(".graph .arrow")) a.classList.remove("lit");
+  $("n-model").textContent = "";
+  $("n-tools").textContent = "";
+  $("a-steps").textContent = "";
+  $("a-graph").hidden = false;
+  $("a-where").textContent = "idle";
+}
+
+function atNode(name) {
+  for (const n of document.querySelectorAll(".graph .node")) {
+    if (n.classList.contains("active")) n.classList.add("visited");
+    n.classList.remove("active");
+  }
+  const node = document.querySelector(`.graph .node[data-node="${name}"]`);
+  if (node) { node.classList.add("active", "visited"); }
+  $("loop").classList.toggle("lit", name === "tools");
+}
+
+function step(who, what, bad) {
+  const row = el("div", { className: bad ? "step bad" : "step" });
+  row.append(el("span", { className: "who", textContent: who }),
+             el("span", { className: "what", textContent: what }));
+  $("a-steps").append(row);
+  $("a-steps").scrollTop = $("a-steps").scrollHeight;
+}
+
+// Long values are shortened HERE only, for the display. The step log is meant to show what was
+// actually fed to the model, and the service already bounded that; this only stops one very long
+// line from pushing the rest off the screen.
+function brief(text, limit = 240) {
+  const s = typeof text === "string" ? text : JSON.stringify(text);
+  return s.length > limit ? s.slice(0, limit) + "..." : s;
+}
+
+function onAgentEvent(event) {
+  if (event.type === "enter") {
+    atNode(event.node);
+    counts[event.node] = (counts[event.node] || 0) + 1;
+    $(`n-${event.node}`).textContent = `x${counts[event.node]}`;
+    $("a-where").textContent = event.node === "model"
+      ? `in model, step ${event.step} - waiting on the provider`
+      : `in tools - ${(event.calls || []).join(", ")}`;
+    if (event.query) step("query", event.query);
+  } else if (event.type === "tool_call") {
+    step(event.name, brief(event.arguments));
+  } else if (event.type === "tool_result") {
+    step(event.ok ? "  ->" : "  -> error", brief(event.summary), !event.ok);
+  } else if (event.type === "fit") {
+    // Worth showing rather than hiding: a smaller model quietly giving up context is exactly the
+    // kind of thing that later looks like the agent "forgetting" something.
+    step("fit", event.action);
+  } else if (event.type === "edge") {
+    step("edge", `to ${event.to}: ${event.reason}`);
+  } else if (event.type === "exit" && event.node === "model" && event.content) {
+    step("answer", brief(event.content));
+  } else if (event.type === "error") {
+    atNode("end");
+    $("a-where").textContent = "failed";
+    step("error", event.message, true);
+  } else if (event.type === "done") {
+    atNode("end");
+    $("a-where").textContent = "done";
+  }
+}
+
+// --- one turn, streamed -------------------------------------------------------------------------
+async function streamAgent(payload) {
+  const res = await fetch("api/agent/stream", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "", done = null;
+  for (;;) {
+    const chunk = await reader.read();
+    if (chunk.done) break;
+    buffer += decoder.decode(chunk.value, { stream: true });
+    // SSE frames are separated by a blank line; a frame can arrive split across chunks, so the
+    // remainder stays in the buffer rather than being parsed as a truncated one.
+    const frames = buffer.split("\n\n");
+    buffer = frames.pop();
+    for (const frame of frames) {
+      const line = frame.split("\n").find((l) => l.startsWith("data: "));
+      if (!line) continue;
+      const event = JSON.parse(line.slice(6));
+      onAgentEvent(event);
+      if (event.type === "done") done = event;
+      if (event.type === "error") throw new Error(event.message);
+    }
+  }
+  return done;
+}
+
+async function sendToAgent() {
+  const text = $("a-input").value.trim();
+  if (!text) return;
+  const settings = agentSettings();
+  if (!settings.base_url || !settings.model) {
+    $("agent-setup").open = true;
+    $("status").textContent = "set a base URL and a model first";
+    return;
+  }
+  chat.push({ role: "user", content: text });
+  $("a-input").value = "";
+  renderChat();
+  chat.push({ role: "assistant", content: "thinking..." });
+  renderChat();
+  chat.pop();
+
+  try {
+    resetGraph();
+    const res = await streamAgent({ ...settings, messages: chat, query: agentQuery });
+    if (!res) throw new Error("the turn ended without a result");
+    chat.push(...res.messages);
+    agentQuery = res.query || agentQuery;
+    renderChat();
+    if (res.summary) {
+      $("a-query").hidden = false;
+      $("a-query").textContent = res.summary;
+    }
+    // The agent's last query, rendered with the same table the Build tab uses, so a result found
+    // by asking is as inspectable, sortable and exportable as one found by clicking.
+    if (res.result) {
+      state.lastKind = "agent";
+      applyScope(res.result);
+      renderTable(res.result);
+    }
+  } catch (e) {
+    $("a-where").textContent = "failed";
+    chat.push({ role: "assistant", content: `error: ${e.message}` });
+    renderChat();
+  }
+}
+
+// --- wiring -----------------------------------------------------------------
+$("registry").onchange = () => selectRegistry($("registry").value);
+$("add-group").onclick = () => {
+  state.groups.push(newGroup([blankFilter()]));
+  renderFilters();
+};
+let aggTarget = null;   // the input inside the aggregate combobox, or null while it is hidden
+
+function rebuildAggList() {
+  const slot = $("agg-target-slot");
+  const op = $("agg-op").value;
+  const previous = aggTarget ? aggTarget.value : "";
+  slot.textContent = "";
+  if (!op || op === "count") { aggTarget = null; return; }
+  aggTarget = el("input", { className: "fieldpick", placeholder: "target field",
+                            spellcheck: false, value: previous });
+  slot.append(combobox(aggTarget, fieldItems(), () => {}));
+}
+
+$("agg-op").onchange = () => {
+  const op = $("agg-op").value;
+  $("agg-note").textContent = !op ? ""
+    : op === "count" ? "counts every matching row, ignoring the limit"
+    : "over the whole result set, ignoring the limit";
+  rebuildAggList();
+};
+$("a-send").onclick = () => sendToAgent().catch((e) => {
+  $("status").textContent = "";
+  $("out").append(el("div", { className: "err", textContent: e.message }));
+});
+$("a-preset").onchange = applyPreset;
+$("a-input").onkeydown = (e) => { if (e.key === "Enter") $("a-send").click(); };
+$("a-clear").onclick = () => {
+  // The refinement state goes with the transcript: keeping the query without the conversation
+  // that built it would leave the next question narrowing something invisible.
+  chat = []; agentQuery = null;
+  $("a-query").hidden = true;
+  $("a-graph").hidden = true;
+  renderChat();
+};
+// Hand the agent's query to the Build tab, so a refinement arrived at by asking can be taken
+// over and finished by clicking.
+$("a-tobuild").onclick = () => {
+  if (!agentQuery) return;
+  state.registry = agentQuery.registry;
+  $("registry").value = agentQuery.registry;
+  selectRegistry(agentQuery.registry).then(() => {
+    state.groups = (agentQuery.groups || []).map((g) => ({
+      match: g.match || "all",
+      filters: g.filters.map((f) => ({ field: f.field, lookup: f.lookup, value: f.value })),
+    }));
+    if (!state.groups.length) state.groups = [newGroup([])];
+    $("match").value = agentQuery.match || "all";
+    renderFilters();
+    $("tab-build").click();
+    run();
+  });
+};
+$("a-save").onclick = () => {
+  localStorage.setItem(AGENT_KEY, JSON.stringify(agentSettings()));
+  $("status").textContent = "connection remembered in this browser";
+};
+$("a-forget").onclick = () => {
+  localStorage.removeItem(AGENT_KEY);
+  $("a-key").value = "";
+  $("status").textContent = "forgotten";
+};
+$("run").onclick = run;
+$("csv").onclick = csvClicked;
+$("copy-link").onclick = async () => {
+  const url = currentUrl();
+  // The portal frames this page, and clipboard access is blocked in some framed contexts,
+  // so fall back to showing the URL rather than failing silently.
+  try { await navigator.clipboard.writeText(url); $("status").textContent = "link copied"; }
+  catch { $("status").textContent = url; }
+};
+$("run-console").onclick = runConsole;
+$("merge-mode").onchange = renderMergePicker;
+$("match").onchange = renderFilters;
+$("show-internal").onchange = () => { if (state.last) renderTable(state.last); };
+$("thumbs").onchange = () => { if (state.last) renderTable(state.last); };
+$("limit").oninput = updateExpr;
+
+const PANELS = [["tab-build", "panel-build"], ["tab-console", "panel-console"],
+                ["tab-agent", "panel-agent"]];
+for (const [btn, panel] of PANELS) {
+  $(btn).onclick = () => {
+    for (const [b, p] of PANELS) {
+      $(b).setAttribute("aria-selected", String(b === btn));
+      $(p).hidden = p !== panel;
+    }
+  };
+}
+
+loadSidebar().catch((e) => {
+  $("registries").textContent = "";
+  $("registries").append(el("div", { className: "err", textContent: e.message }));
+});
+</script>

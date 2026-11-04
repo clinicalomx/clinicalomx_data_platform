@@ -1,0 +1,42 @@
+# CI for packages/clinicalomx_markers
+name: pkg-clinicalomx-markers
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/clinicalomx_markers/**"
+      - "packages/clinicalomx/**"
+      - "packages/clinicalomx_ledger/**"
+      - "packages/clinicalomx_reagents/**"
+      - ".github/workflows/pkg-clinicalomx-markers.yml"
+  pull_request:
+    paths:
+      - "packages/clinicalomx_markers/**"
+      - "packages/clinicalomx/**"
+      - "packages/clinicalomx_ledger/**"
+      - "packages/clinicalomx_reagents/**"
+      - ".github/workflows/pkg-clinicalomx-markers.yml"
+
+defaults:
+  run:
+    working-directory: packages/clinicalomx_markers
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install
+        run: uv sync
+
+      - name: Tests
+        run: uv run pytest -q
+
+      - name: Lint
+        run: uv run ruff check src tests

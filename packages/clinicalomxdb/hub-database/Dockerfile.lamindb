@@ -1,0 +1,60 @@
+FROM python:3.12
+
+RUN python3 -m venv /opt/lamindb_env
+
+ENV PATH="/opt/lamindb_env/bin:$PATH"
+
+# --no-cache-dir: pip's download cache would otherwise be baked into this layer, and the
+# VM's docker volume runs tight (spatialdata alone pulls numpy/scipy/xarray/dask/zarr).
+# --retries/--timeout: a mid-download BrokenPipeError has killed this build before.
+RUN pip install --no-cache-dir --retries 10 --timeout 60 \
+    "lamindb==2.8.1" "psycopg2-binary" "pyyaml" "ipython" "ipykernel" "spatialdata"
+
+# The Explore tab's Agent (hub-database/explorer/agent.py). langgraph runs the loop; the OpenAI
+# SDK makes the calls, because it is the interface every OpenAI-compatible server implements, so
+# a local llama.cpp or vLLM, Anthropic's compatibility endpoint and OpenAI itself all work with
+# only a base URL between them. Deliberately NOT langchain-openai: one provider wrapper would buy
+# nothing here and pull a much larger tree.
+#
+# Pinned like everything else. Together these are tens of megabytes, which is small beside
+# spatialdata but is still the reason the Agent tab needs `make db-build` rather than a restart.
+RUN pip install --no-cache-dir --retries 10 --timeout 60 \
+    "langgraph==1.2.10" "openai==2.53.0"
+
+# The four first-party packages arrive as wheels `make db-build` builds from this checkout into
+# dist/. A `name @ file://` requirement cannot be satisfied by any index, so no published copy of
+# any of them can be selected in its place, and the build takes no credential.
+
+# uv, from its own published image and by the same floating tag Dockerfile.qptiff uses. It is a
+# build tool only: nothing at runtime calls it, and the venv it installs into is the same
+# /opt/lamindb_env the pip calls above filled.
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+# clinicalomx_markers is a CONSUMER vocabulary: the foundation is a floor, and each consumer
+# declares what it uses above it through the clinicalomx.vocabulary entry point (docs/architecture/decisions/0003).
+# An entry point is only discoverable if the package is INSTALLED, so `plan --with-consumers`
+# sees a consumer's declarations only when that consumer is in this image. Adding a consumer is
+# therefore an image change, not a configuration change.
+#
+# The ledger and the reagents are named EXPLICITLY even though markers depends on both: a wheel
+# carries no path sources, so a first-party name left implicit would be looked up on PyPI. Installing
+# the ledger holds the Django app and nothing more: no lamin module is added to the instance and
+# no migration runs, which stay behind approval gate 15.
+#
+# All four go in ONE call, so the resolver sees them together. --no-cache for the reason the pip
+# calls above use --no-cache-dir: the VM's docker volume runs tight.
+COPY dist /src/dist
+RUN set -eu; \
+    cx=$(echo /src/dist/clinicalomx-*.whl); mk=$(echo /src/dist/clinicalomx_markers-*.whl); \
+    lg=$(echo /src/dist/clinicalomx_ledger-*.whl); rg=$(echo /src/dist/clinicalomx_reagents-*.whl); \
+    for w in "$cx" "$mk" "$lg" "$rg"; do [ -f "$w" ]; done; \
+    uv pip install --python /opt/lamindb_env/bin/python --no-cache \
+      "clinicalomx[vocab] @ file://$cx" \
+      "clinicalomx_markers @ file://$mk" \
+      "clinicalomx_ledger[store] @ file://$lg" \
+      "clinicalomx_reagents @ file://$rg"
+
+COPY . /hub
+WORKDIR /workspace
+
+CMD ["bash"]

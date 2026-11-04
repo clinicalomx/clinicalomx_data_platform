@@ -1,0 +1,1090 @@
+{
+  "headers": {
+    "content-type": "application/json",
+    "x-uniprot-release": "2026_02",
+    "x-uniprot-release-date": "10-June-2026"
+  },
+  "body": {
+    "entryType": "UniProtKB reviewed (Swiss-Prot)",
+    "primaryAccession": "P05023",
+    "proteinDescription": {
+      "recommendedName": {
+        "fullName": {
+          "value": "Sodium/potassium-transporting ATPase subunit alpha-1"
+        },
+        "shortNames": [
+          {
+            "value": "Na(+)/K(+) ATPase alpha-1 subunit"
+          }
+        ],
+        "ecNumbers": [
+          {
+            "evidences": [
+              {
+                "evidenceCode": "ECO:0000269",
+                "source": "PubMed",
+                "id": "35803952"
+              }
+            ],
+            "value": "7.2.2.13"
+          }
+        ]
+      },
+      "alternativeNames": [
+        {
+          "fullName": {
+            "value": "Sodium pump subunit alpha-1"
+          }
+        }
+      ]
+    },
+    "genes": [
+      {
+        "geneName": {
+          "value": "ATP1A1"
+        }
+      }
+    ],
+    "comments": [
+      {
+        "texts": [
+          {
+            "evidences": [
+              {
+                "evidenceCode": "ECO:0000250",
+                "source": "UniProtKB",
+                "id": "Q8VDN2"
+              },
+              {
+                "evidenceCode": "ECO:0000269",
+                "source": "PubMed",
+                "id": "29499166"
+              },
+              {
+                "evidenceCode": "ECO:0000269",
+                "source": "PubMed",
+                "id": "30388404"
+              },
+              {
+                "evidenceCode": "ECO:0000269",
+                "source": "PubMed",
+                "id": "35803952"
+              }
+            ],
+            "value": "Catalytic subunit of the Na(+)/K(+)-ATPase pump that hydrolyzes ATP to exchange ions across the plasma membrane, exporting 3 Na(+) and importing 2 K(+) per cycle against electrochemical gradients (PubMed:29499166, PubMed:30388404, PubMed:35803952). It undergoes ATP-driven conformational changes that allow alternating binding and release of Na(+) and K(+) ions across the membrane (PubMed:35803952). This process maintains essential Na(+) and K(+) gradients for membrane potential and cellular function. Could also be part of an osmosensory signaling pathway that senses body-fluid sodium levels and controls salt intake behavior as well as voluntary water intake to regulate sodium homeostasis (By similarity)"
+          }
+        ],
+        "commentType": "FUNCTION"
+      },
+      {
+        "commentType": "SUBCELLULAR LOCATION",
+        "note": {
+          "texts": [
+            {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "17081065"
+                }
+              ],
+              "value": "Identified by mass spectrometry in melanosome fractions from stage I to stage IV"
+            }
+          ]
+        },
+        "subcellularLocations": [
+          {
+            "location": {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000250",
+                  "source": "UniProtKB",
+                  "id": "Q8VDN2"
+                }
+              ],
+              "value": "Cell membrane",
+              "id": "SL-0039"
+            },
+            "topology": {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "35803952"
+                }
+              ],
+              "value": "Multi-pass membrane protein",
+              "id": "SL-9909"
+            }
+          },
+          {
+            "location": {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000250",
+                  "source": "UniProtKB",
+                  "id": "P06685"
+                }
+              ],
+              "value": "Basolateral cell membrane",
+              "id": "SL-0026"
+            },
+            "topology": {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "35803952"
+                }
+              ],
+              "value": "Multi-pass membrane protein",
+              "id": "SL-9909"
+            }
+          },
+          {
+            "location": {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "7711835"
+                }
+              ],
+              "value": "Cell membrane, sarcolemma",
+              "id": "SL-0238"
+            },
+            "topology": {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "35803952"
+                }
+              ],
+              "value": "Multi-pass membrane protein",
+              "id": "SL-9909"
+            }
+          },
+          {
+            "location": {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000250",
+                  "source": "UniProtKB",
+                  "id": "P06685"
+                }
+              ],
+              "value": "Cell projection, axon",
+              "id": "SL-0279"
+            }
+          },
+          {
+            "location": {
+              "evidences": [
+                {
+                  "evidenceCode": "ECO:0000269",
+                  "source": "PubMed",
+                  "id": "17081065"
+                }
+              ],
+              "value": "Melanosome",
+              "id": "SL-0161"
+            }
+          }
+        ]
+      }
+    ],
+    "uniProtKBCrossReferences": [
+      {
+        "database": "GO",
+        "id": "GO:0016324",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:apical plasma membrane"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:ARUK-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "11193188"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0030424",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:axon"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:UniProtKB-SubCell"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0016323",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:basolateral plasma membrane"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "ISS:UniProtKB"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005783",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:endoplasmic reticulum"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "ISS:BHF-UCL"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0070062",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:extracellular exosome"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "HDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0007005",
+            "source": "PubMed",
+            "id": "12519789"
+          },
+          {
+            "evidenceCode": "ECO:0007005",
+            "source": "PubMed",
+            "id": "19199708"
+          },
+          {
+            "evidenceCode": "ECO:0007005",
+            "source": "PubMed",
+            "id": "20458337"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:1903561",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:extracellular vesicle"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "HDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0007005",
+            "source": "PubMed",
+            "id": "24769233"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005794",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:Golgi apparatus"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "ISS:BHF-UCL"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0016328",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:lateral plasma membrane"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:ARUK-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "11193188"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0042470",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:melanosome"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:UniProtKB-SubCell"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0016020",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:membrane"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "ISS:UniProtKB"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0045121",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:membrane raft"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "ISS:ARUK-UCL"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0031090",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:organelle membrane"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IGI:ARUK-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000316",
+            "source": "PubMed",
+            "id": "19751721"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0060342",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:photoreceptor inner segment membrane"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "ISS:ARUK-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000250",
+            "source": "PubMed",
+            "id": "26373354"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005886",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:plasma membrane"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProtKB"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "7711835"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0014069",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:postsynaptic density"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:Ensembl"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0032991",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:protein-containing complex"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:MGI"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "22797923"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0042383",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:sarcolemma"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "ISS:BHF-UCL"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005890",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:sodium:potassium-exchanging ATPase complex"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "10636900"
+          },
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "19542013"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0036126",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:sperm flagellum"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:ARUK-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "16861705"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0030315",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "C:T-tubule"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IGI:ARUK-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000316",
+            "source": "PubMed",
+            "id": "19751721"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005524",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:ATP binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "ISS:BHF-UCL"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0016887",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:ATP hydrolysis activity"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:UniProt"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "10636900"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0005391",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:P-type sodium:potassium-exchanging transporter activity"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "10636900"
+          },
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "19542013"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0016791",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:phosphatase activity"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:Ensembl"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0030955",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:potassium ion binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "ISS:BHF-UCL"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0051087",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:protein-folding chaperone binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IPI:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000353",
+            "source": "PubMed",
+            "id": "10636900"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0031402",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:sodium ion binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "ISS:BHF-UCL"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:1990239",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:steroid hormone binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "14742675"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0044325",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "F:transmembrane transporter binding"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:Ensembl"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0086002",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:cardiac muscle cell action potential involved in contraction"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "TAS:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000304",
+            "source": "PubMed",
+            "id": "23224879"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0086064",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:cell communication by electrical coupling involved in cardiac conduction"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "TAS:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000304",
+            "source": "PubMed",
+            "id": "19683723"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0071383",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:cellular response to steroid hormone stimulus"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "11546672"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0010248",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:establishment or maintenance of transmembrane electrochemical gradient"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "NAS:ComplexPortal"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000303",
+            "source": "PubMed",
+            "id": "24688018"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0030007",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:intracellular potassium ion homeostasis"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "10636900"
+          },
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "19542013"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0006883",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:intracellular sodium ion homeostasis"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "10636900"
+          },
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "19542013"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0086009",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:membrane repolarization"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "19542013"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0086013",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:membrane repolarization during cardiac muscle cell action potential"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IC:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000305",
+            "source": "PubMed",
+            "id": "19542013"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0007231",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:osmosensory signaling pathway"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IEA:Ensembl"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:1990573",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:potassium ion import across plasma membrane"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "10636900"
+          },
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "19542013"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0071805",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:potassium ion transmembrane transport"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IGI:ARUK-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000316",
+            "source": "PubMed",
+            "id": "18052210"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:1902600",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:proton transmembrane transport"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IBA:GO_Central"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0002028",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:regulation of sodium ion transport"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "ISS:UniProtKB"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0055119",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:relaxation of cardiac muscle"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "TAS:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000304",
+            "source": "PubMed",
+            "id": "23224879"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:1903416",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:response to glycoside"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "11546672"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0036376",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:sodium ion export across plasma membrane"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IDA:BHF-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "10636900"
+          },
+          {
+            "evidenceCode": "ECO:0000314",
+            "source": "PubMed",
+            "id": "19542013"
+          }
+        ]
+      },
+      {
+        "database": "GO",
+        "id": "GO:0035725",
+        "properties": [
+          {
+            "key": "GoTerm",
+            "value": "P:sodium ion transmembrane transport"
+          },
+          {
+            "key": "GoEvidenceType",
+            "value": "IGI:ARUK-UCL"
+          }
+        ],
+        "evidences": [
+          {
+            "evidenceCode": "ECO:0000316",
+            "source": "PubMed",
+            "id": "18052210"
+          }
+        ]
+      }
+    ],
+    "extraAttributes": {
+      "uniParcId": "UPI0000124FBB"
+    }
+  }
+}

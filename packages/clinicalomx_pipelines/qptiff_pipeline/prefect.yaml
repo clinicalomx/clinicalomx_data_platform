@@ -1,0 +1,537 @@
+name: clinicalomx-pipeline
+prefect-version: ">=3.6"
+
+# Every {{ $NAME }} below is a site value from site.env, which scripts/site/render.py writes from
+# site.yaml. Register with scripts/site/deploy.sh: it renders, then refuses to run `prefect deploy`
+# while any such name is unset, because Prefect registers an unset one as literal text.
+
+# HPC compute flows run in the croi SIF (clinical_roi + clinicalomx + lamindb baked);
+# this pull brings THIS package's flow code in at run time, authed by the github-croi-pat
+# Secret. The flow files bootstrap src/ onto sys.path so the src-layout package imports
+# from the clone.
+
+pull:
+    - prefect.deployments.steps.git_clone:
+          id: clone
+          repository: "https://github.com/{{ $CLINICALOMX_SITE_REPOSITORY }}.git"
+          branch: platform-v33
+          credentials:
+              username: x-access-token
+              access_token: "{{ prefect.blocks.secret.github-croi-pat }}"
+    - prefect.deployments.steps.set_working_directory:
+          directory: "{{ clone.directory }}/packages/clinicalomx_pipelines/qptiff_pipeline"
+
+deployments:
+    - name: pipeline-register-qptiffs
+      entrypoint: src/qptiff_pipeline/flows/register_qptiffs.py:register_qptiffs
+      description: "Register new .qptiff files under a folder as lamindb Artifacts (in place)."
+      work_pool:
+          name: hpc-ssh-pool
+          job_variables:
+              image: "{{ $CLINICALOMX_SITE_IMAGE_REGISTRY }}/comx-qptiff:cx0.1.0-bio23e46aa" # fallback; docker_ref comes from the SIF artifact
+              sif_artifact: "environments/{{ $CLINICALOMX_SITE_IMAGE_OWNER }}/comx-qptiff_cx0.1.0-bio23e46aa.sif" # SIF (kind=environment); if missing, worker pulls docker_ref
+              registry_auth_block: ghcr-croi
+              apptainer_cachedir: "{{ $CLINICALOMX_SITE_HPC_ALIAS }}/apptainer_cache"
+              cpus_per_task: 4
+              mem: 16G
+              walltime: "1:00:00"
+              qos: short
+      parameters:
+          source_directory: "{{ $CLINICALOMX_SITE_RAW_ROOT }}"
+          parent_storage_root: "{{ $CLINICALOMX_SITE_RAW_ROOT }}"
+      schedules:
+          - interval: 259300 # 1800s; 0.5h, 259200 - > every 3d
+      tags: [pipeline, ingest, artifact]
+
+    - name: pipeline-check-qptiffs
+      entrypoint: src/qptiff_pipeline/flows/check_qptiffs.py:check_qptiffs
+      description: "Integrity gate: probe each qptiff's readability, quarantine + Teams-alert bad files."
+      work_pool:
+          name: hpc-ssh-pool
+          job_variables:
+              image: "{{ $CLINICALOMX_SITE_IMAGE_REGISTRY }}/comx-qptiff:cx0.1.0-bio23e46aa" # fallback; docker_ref comes from the SIF artifact
+              sif_artifact: "environments/{{ $CLINICALOMX_SITE_IMAGE_OWNER }}/comx-qptiff_cx0.1.0-bio23e46aa.sif" # SIF (kind=environment); if missing, worker pulls docker_ref
+              registry_auth_block: ghcr-croi
+              apptainer_cachedir: "{{ $CLINICALOMX_SITE_HPC_ALIAS }}/apptainer_cache"
+              cpus_per_task: 8
+              mem: 64G 
+              walltime: "10:00:00"
+              qos: normal
+      parameters:
+          target_directory: "{{ $CLINICALOMX_SITE_HPC_ALIAS }}"
+      # No schedule: triggered by register-qptiffs-check-qptiffs
+      tags: [pipeline, ingest, qc]
+
+    - name: pipeline-general-detect
+      entrypoint: src/qptiff_pipeline/flows/general_detect.py:general_detect
+      description: "Detect ROIs per WholeSlide -> candidate + general_pending (HITL review)."
+      work_pool:
+          name: hpc-ssh-pool
+          job_variables:
+              image: "{{ $CLINICALOMX_SITE_IMAGE_REGISTRY }}/croi-general-inference:v0.3.5" # fallback; docker_ref comes from the SIF artifact
+              sif_artifact: "environments/{{ $CLINICALOMX_SITE_IMAGE_OWNER }}/croi-general-inference_v0.3.5.sif" # SIF (kind=environment); if missing, worker pulls docker_ref
+              registry_auth_block: ghcr-croi
+              apptainer_cachedir: "{{ $CLINICALOMX_SITE_HPC_ALIAS }}/apptainer_cache"
+              cpus_per_task: 8
+              mem: 16G
+              walltime: "1:00:00"
+      parameters:
+          model_alias: production
+          target_directory: "{{ $CLINICALOMX_SITE_HPC_ALIAS }}"
+      # No schedule: launched by the check-general-detect VM gate
+      tags: [pipeline, inference, detect, artifact]
+
+    - name: pipeline-general-persist
+      entrypoint: src/qptiff_pipeline/flows/general_persist.py:general_persist
+      description: "Accept side: register TMA Records from the accepted candidate -> general_approved."
+      work_pool:
+          name: hpc-ssh-pool
+          job_variables:
+              image: "{{ $CLINICALOMX_SITE_IMAGE_REGISTRY }}/croi-general-inference:v0.3.5" # fallback; docker_ref comes from the SIF artifact
+              sif_artifact: "environments/{{ $CLINICALOMX_SITE_IMAGE_OWNER }}/croi-general-inference_v0.3.5.sif" # SIF (kind=environment); if missing, worker pulls docker_ref
+              registry_auth_block: ghcr-croi
+              apptainer_cachedir: "{{ $CLINICALOMX_SITE_HPC_ALIAS }}/apptainer_cache"
+              cpus_per_task: 4
+              mem: 16G
+              walltime: "1:00:00"
+      parameters:
+          target_directory: "{{ $CLINICALOMX_SITE_HPC_ALIAS }}"
+          # slide_uids: passed per run (accepted WholeSlide uids)
+      tags: [pipeline, ingest, roi]
+
+    - name: pipeline-core-detect
+      entrypoint: src/qptiff_pipeline/flows/core_detect.py:core_detect
+      description: "Detect + grid-fit cores per TMA -> candidate + core_pending (HITL review)."
+      work_pool:
+          name: hpc-ssh-pool
+          job_variables:
+              image: "{{ $CLINICALOMX_SITE_IMAGE_REGISTRY }}/croi-core-inference:v0.3.5" # fallback; docker_ref comes from the SIF artifact
+              sif_artifact: "environments/{{ $CLINICALOMX_SITE_IMAGE_OWNER }}/croi-core-inference_v0.3.5.sif" # SIF (kind=environment); if missing, worker pulls docker_ref
+              registry_auth_block: ghcr-croi
+              apptainer_cachedir: "{{ $CLINICALOMX_SITE_HPC_ALIAS }}/apptainer_cache"
+              cpus_per_task: 8
+              mem: 16G
+              qos: short
+              walltime: "0:10:00"
+      parameters:
+          model_alias: "11m" # the model + conf the notebook validated for gridding on this data
+          conf: 0.1 # (production/v4 @ 0.25 produced detections estimate_grid could not lattice)
+          target_directory: "{{ $CLINICALOMX_SITE_HPC_ALIAS }}"
+          # tma_uids: passed per run by the tma-registered-core-detect Automation (per TMA)
+      # No schedule: event-driven per TMA (clinical-roi.tma.registered).
+      tags: [pipeline, inference, core, detect]
+
+    - name: pipeline-core-persist
+      entrypoint: src/qptiff_pipeline/flows/core_persist.py:core_persist
+      description: "Accept side: register Core Records from the accepted candidate grid -> core_approved."
+      work_pool:
+          name: hpc-ssh-pool
+          job_variables:
+              image: "{{ $CLINICALOMX_SITE_IMAGE_REGISTRY }}/croi-core-inference:v0.3.5" # fallback; docker_ref comes from the SIF artifact
+              sif_artifact: "environments/{{ $CLINICALOMX_SITE_IMAGE_OWNER }}/croi-core-inference_v0.3.5.sif" # SIF (kind=environment); if missing, worker pulls docker_ref
+              registry_auth_block: ghcr-croi
+              apptainer_cachedir: "{{ $CLINICALOMX_SITE_HPC_ALIAS }}/apptainer_cache"
+              cpus_per_task: 4
+              mem: 16G
+              walltime: "1:00:00"
+      parameters:
+          target_directory: "{{ $CLINICALOMX_SITE_HPC_ALIAS }}"
+          # tma_uids: passed per run by the core-accepted-persist Automation
+      tags: [pipeline, core, roi]
+
+    - name: pipeline-bgnorm-core
+      entrypoint: src/qptiff_pipeline/flows/bgnorm_stage.py:bgnorm_core
+      description: "Background normalise ONE core's full res FOV (one sbatch job per core), log a per-core MLflow experiment."
+      work_pool:
+          name: hpc-ssh-pool
+          job_variables:
+              image: "{{ $CLINICALOMX_SITE_IMAGE_REGISTRY }}/bgnorm-inference:v0.1.2-cx0.1.0" # docker_ref for the SIF build
+              sif_artifact: "environments/{{ $CLINICALOMX_SITE_IMAGE_OWNER }}/bgnorm-inference_v0.1.2-cx0.1.0.sif" # SIF (kind=environment); if missing, worker pulls docker_ref
+              registry_auth_block: ghcr-croi
+              apptainer_cachedir: "{{ $CLINICALOMX_SITE_HPC_ALIAS }}/apptainer_cache"
+              cpus_per_task: 8
+              mem: 128G
+              walltime: "6:00:00"
+              qos: normal
+      parameters:
+          target_directory: "{{ $CLINICALOMX_SITE_HPC_ALIAS }}"
+          max_runtime_minutes: 300
+      tags: [pipeline, bgnorm, core, normalize]
+
+    - name: pipeline-bgnorm-runner
+      entrypoint: src/qptiff_pipeline/flows/bgnorm_stage.py:bgnorm_runner
+      description: "Long-running orchestrator: launch + monitor bgnorm-core subflows for queued TMAs, resubmit failures (bounded), advance each TMA to bgnorm_pending/bgnorm_failed."
+      work_pool:
+          name: vm-pool
+      pull:
+          - prefect.deployments.steps.set_working_directory:
+                directory: /opt/clinicalomx_data_platform/current/packages/clinicalomx_pipelines/qptiff_pipeline
+      parameters:
+          max_jobs: 8
+          max_cores_per_job: 4
+          max_resubmit: 3
+          max_submit_failures: 5
+      concurrency_limit: 1 # one monitor at a time
+      # no schedule: bgnorm is started on demand
+      schedules: []
+      tags: [pipeline, bgnorm, runner, monitor]
+
+    - name: pipeline-extract-assemble
+      entrypoint: src/qptiff_pipeline/flows/extract_assemble.py:extract_assemble
+      description: "Assemble one chunk of an approved clinicalomx extract plan; submitted by the Build app, never scheduled."
+      work_pool:
+          name: hpc-ssh-pool
+          job_variables:
+              image: "{{ $CLINICALOMX_SITE_IMAGE_REGISTRY }}/comx-extract:cx0.1.0-bio23e46aa" # docker_ref for the SIF build
+              sif_artifact: "environments/{{ $CLINICALOMX_SITE_IMAGE_OWNER }}/comx-extract_cx0.1.0-bio23e46aa.sif" # SIF (kind=environment); if missing, worker pulls docker_ref
+              registry_auth_block: ghcr-croi
+              apptainer_cachedir: "{{ $CLINICALOMX_SITE_HPC_ALIAS }}/apptainer_cache"
+              cpus_per_task: 8
+              mem: 256G
+              oom_retry_max_mem: 512G # if not enough memory increment up to max 512g alloc
+              walltime: "6:00:00"
+              qos: normal
+      parameters:
+          max_runtime_minutes: 300
+      concurrency_limit: 8
+      # no schedule: event driven
+      schedules: []
+      tags: [pipeline, extract, assemble]
+
+    - name: pipeline-reset-slide
+      entrypoint: src/qptiff_pipeline/flows/reset_slide.py:reset_slide
+      description: "Cascade reset of a reopened WholeSlide: trash downstream core/bgnorm records + artifacts, purge harvested pairs, supersede TMAs, back to general_pending."
+      work_pool:
+          name: hpc-ssh-pool
+          job_variables:
+              # Reuses the core SIF (has lamindb + prefect + storage access to trash bytes).
+              image: "{{ $CLINICALOMX_SITE_IMAGE_REGISTRY }}/comx-qptiff:cx0.1.0-bio23e46aa" # fallback; docker_ref comes from the SIF artifact
+              sif_artifact: "environments/{{ $CLINICALOMX_SITE_IMAGE_OWNER }}/comx-qptiff_cx0.1.0-bio23e46aa.sif" # SIF (kind=environment); if missing, worker pulls docker_ref
+              registry_auth_block: ghcr-croi
+              apptainer_cachedir: "{{ $CLINICALOMX_SITE_HPC_ALIAS }}/apptainer_cache"
+              cpus_per_task: 4
+              mem: 16G
+              qos: short
+              walltime: "1:00:00"
+      parameters:
+          dry_run: false
+      # No schedule: event driven 
+      tags: [pipeline, general, core, reset]
+
+    # util flows
+    - name: utils-heal-orphaned-bgnorm
+      entrypoint: src/qptiff_pipeline/flows/heal_orphaned_bgnorm.py:heal_orphaned_bgnorm
+      description: "Re-open cores whose bgnormed zarr bytes are gone (storage-migration orphans): clear the dead ref (and that run's QC table), trash the orphans, re-queue the TMA so the runner regenerates. dry_run=true logs the plan only."
+      work_pool:
+          name: hpc-ssh-pool
+          job_variables:
+              image: "{{ $CLINICALOMX_SITE_IMAGE_REGISTRY }}/comx-qptiff:cx0.1.0-bio23e46aa" # fallback; docker_ref comes from the SIF artifact
+              sif_artifact: "environments/{{ $CLINICALOMX_SITE_IMAGE_OWNER }}/comx-qptiff_cx0.1.0-bio23e46aa.sif" # SIF (kind=environment); if missing, worker pulls docker_ref
+              registry_auth_block: ghcr-croi
+              apptainer_cachedir: "{{ $CLINICALOMX_SITE_HPC_ALIAS }}/apptainer_cache"
+              cpus_per_task: 2
+              mem: 16G
+              walltime: "3:00:00"
+              qos: short
+      parameters:
+          dry_run: true # review the logged plan first; re-run with dry_run=false to heal + re-queue
+      tags: [utils, heal, bgnorm]
+
+    - name: utils-clear-bgnorm-failures
+      entrypoint: src/qptiff_pipeline/flows/clear_bgnorm_failures.py:clear_bgnorm_failures
+      description: "Re-open cores stranded by the old all-or-nothing bgnorm failure (one blank channel failed the whole core): clear bgnorm_core_failed/bgnorm_attempts on un-bgnormed cores and re-queue their TMA so the runner re-runs them under the per-channel fix. Metadata only; dry_run=true logs the plan."
+      work_pool:
+          name: vm-pool
+      pull:
+          - prefect.deployments.steps.set_working_directory:
+                directory: /opt/clinicalomx_data_platform/current/packages/clinicalomx_pipelines/qptiff_pipeline
+      parameters:
+          dry_run: true # review the logged plan first; re-run with dry_run=false to clear + re-queue
+      tags: [utils, bgnorm, rerun]
+
+    - name: utils-sweep-orphan-bgnorm-zarrs
+      entrypoint: src/qptiff_pipeline/flows/sweep_orphan_bgnorm_zarrs.py:sweep_orphan_bgnorm_zarrs
+      description: "Reclaim disk from bgnorm output that no Artifact row references: bgnormed-image-*.zarr dirs and bgnorm-qc-*.parquet files left half-written by cancelled/killed bgnorm-core runs. Skips anything younger than min_age_minutes so a live write is never deleted. dry_run=true reports the manifest + GB only."
+      work_pool:
+          name: hpc-ssh-pool
+          job_variables:
+              image: "{{ $CLINICALOMX_SITE_IMAGE_REGISTRY }}/comx-qptiff:cx0.1.0-bio23e46aa" # fallback; docker_ref comes from the SIF artifact
+              sif_artifact: "environments/{{ $CLINICALOMX_SITE_IMAGE_OWNER }}/comx-qptiff_cx0.1.0-bio23e46aa.sif" # SIF (kind=environment); if missing, worker pulls docker_ref
+              registry_auth_block: ghcr-croi
+              apptainer_cachedir: "{{ $CLINICALOMX_SITE_HPC_ALIAS }}/apptainer_cache"
+              cpus_per_task: 2
+              mem: 16G
+              walltime: "3:00:00"
+              qos: short
+      parameters:
+          storage_root: "{{ $CLINICALOMX_SITE_HPC_ALIAS }}"
+          dry_run: true # review the logged manifest first; re-run with dry_run=false to delete
+      tags: [utils, cleanup, bgnorm]
+
+    - name: utils-reset-bgnorm
+      entrypoint: src/qptiff_pipeline/flows/reset_bgnorm.py:reset_bgnorm
+      description: "Clean-slate reset of bgnorm: trash each targeted core's bgnormed zarr + QC parquet (row + bytes), clear its markers and the TMA's own result features, re-queue the TMA to bgnorm_queued so the runner recomputes at the current key. Scope with tma_uids/tma_names/slide_uids, or all_tmas=true for the whole population (needs confirm='wipe-every-bgnorm' to apply). A 'complete' TMA is skipped unless include_complete=true. dry_run=true logs the plan, with a core count and a byte total, and touches nothing."
+      work_pool:
+          name: hpc-ssh-pool
+          job_variables:
+              image: "{{ $CLINICALOMX_SITE_IMAGE_REGISTRY }}/comx-qptiff:cx0.1.0-bio23e46aa" # fallback; docker_ref comes from the SIF artifact
+              sif_artifact: "environments/{{ $CLINICALOMX_SITE_IMAGE_OWNER }}/comx-qptiff_cx0.1.0-bio23e46aa.sif" # SIF (kind=environment); if missing, worker pulls docker_ref
+              registry_auth_block: ghcr-croi
+              apptainer_cachedir: "{{ $CLINICALOMX_SITE_HPC_ALIAS }}/apptainer_cache"
+              cpus_per_task: 2
+              mem: 16G
+              walltime: "3:00:00"
+              qos: short
+      parameters:
+          dry_run: true # review the logged plan first; re-run with dry_run=false + tma_uids/tma_names/slide_uids (or all_tmas + confirm) to apply
+      tags: [utils, reset, bgnorm]
+
+    - name: utils-reset-tma-cores
+      entrypoint: src/qptiff_pipeline/flows/reset_tma_cores.py:reset_tma_cores
+      description: "Reprocess a TMA from the core stage: delete its Core records + core/bgnorm artifacts and park it back at registered so core-detect regenerates cores WITH provenance. dry_run=true logs the plan only."
+      work_pool:
+          name: hpc-ssh-pool
+          job_variables:
+              image: "{{ $CLINICALOMX_SITE_IMAGE_REGISTRY }}/comx-qptiff:cx0.1.0-bio23e46aa" # fallback; docker_ref comes from the SIF artifact
+              sif_artifact: "environments/{{ $CLINICALOMX_SITE_IMAGE_OWNER }}/comx-qptiff_cx0.1.0-bio23e46aa.sif" # SIF (kind=environment); if missing, worker pulls docker_ref
+              registry_auth_block: ghcr-croi
+              apptainer_cachedir: "{{ $CLINICALOMX_SITE_HPC_ALIAS }}/apptainer_cache"
+              cpus_per_task: 2
+              mem: 16G
+              walltime: "3:00:00"
+              qos: short
+      parameters:
+          dry_run: true # review the logged teardown plan first; re-run with dry_run=false to apply
+      tags: [utils, reset, tma, core]
+
+    - name: utils-audit-storage
+      entrypoint: src/qptiff_pipeline/flows/audit_storage.py:audit_storage
+      description: "READ-ONLY: reconcile on-disk derivative files under the Storage root against the lamindb registry. Surfaces real data whose Artifacts/records were lost in earlier migrations, and registry orphans (missing bytes)."
+      work_pool:
+          name: hpc-ssh-pool
+          job_variables:
+              image: "{{ $CLINICALOMX_SITE_IMAGE_REGISTRY }}/comx-qptiff:cx0.1.0-bio23e46aa" # fallback; docker_ref comes from the SIF artifact
+              sif_artifact: "environments/{{ $CLINICALOMX_SITE_IMAGE_OWNER }}/comx-qptiff_cx0.1.0-bio23e46aa.sif" # SIF (kind=environment); if missing, worker pulls docker_ref
+              registry_auth_block: ghcr-croi
+              apptainer_cachedir: "{{ $CLINICALOMX_SITE_HPC_ALIAS }}/apptainer_cache"
+              cpus_per_task: 2
+              mem: 16G
+              walltime: "3:00:00"
+              qos: short
+      parameters:
+          storage_root: "{{ $CLINICALOMX_SITE_HPC_ALIAS }}"
+      # Read-only reconciliation; safe to run anytime.
+      tags: [utils, audit, storage]
+
+    - name: utils-cleanup-storage
+      entrypoint: src/qptiff_pipeline/flows/cleanup_storage.py:cleanup_storage
+      description: "Reclaim disk: permanently purge TRASHED artifacts (row + bytes) and delete ORPHANED .lamindb blobs (no DB row) in dbstorage. DESTRUCTIVE; dry_run=true reports the manifest only."
+      work_pool:
+          name: hpc-ssh-pool
+          job_variables:
+              image: "{{ $CLINICALOMX_SITE_IMAGE_REGISTRY }}/comx-qptiff:cx0.1.0-bio23e46aa" # fallback; docker_ref comes from the SIF artifact
+              sif_artifact: "environments/{{ $CLINICALOMX_SITE_IMAGE_OWNER }}/comx-qptiff_cx0.1.0-bio23e46aa.sif" # SIF (kind=environment); if missing, worker pulls docker_ref
+              registry_auth_block: ghcr-croi
+              apptainer_cachedir: "{{ $CLINICALOMX_SITE_HPC_ALIAS }}/apptainer_cache"
+              cpus_per_task: 2
+              mem: 16G
+              walltime: "3:00:00"
+              qos: short
+      parameters:
+          storage_root: "{{ $CLINICALOMX_SITE_HPC_ROOT }}"
+          dry_run: true # review the full PURGE/ORPHAN manifest first; re-run with dry_run=false to apply
+      tags: [utils, cleanup, storage]
+
+    - name: utils-reconcile-bytes
+      entrypoint: src/qptiff_pipeline/flows/reconcile_bytes.py:reconcile_bytes
+      description: "Move displaced artifact bytes back to art.path (fixes migrate-keys displacement, e.g. detection overlays whose bytes were moved under the pipeline-root prefix). ZERO DB writes; preserves records/artifacts/keys. dry_run=true reports the plan."
+      work_pool:
+          name: hpc-ssh-pool
+          job_variables:
+              image: "{{ $CLINICALOMX_SITE_IMAGE_REGISTRY }}/comx-qptiff:cx0.1.0-bio23e46aa" # fallback; docker_ref comes from the SIF artifact
+              sif_artifact: "environments/{{ $CLINICALOMX_SITE_IMAGE_OWNER }}/comx-qptiff_cx0.1.0-bio23e46aa.sif" # SIF (kind=environment); if missing, worker pulls docker_ref
+              registry_auth_block: ghcr-croi
+              apptainer_cachedir: "{{ $CLINICALOMX_SITE_HPC_ALIAS }}/apptainer_cache"
+              cpus_per_task: 2
+              mem: 16G
+              walltime: "3:00:00"
+              qos: short
+      parameters:
+          storage_root: "{{ $CLINICALOMX_SITE_HPC_ROOT }}"
+          dry_run: true # report OK/FIX/MISSING/AMBIGUOUS first; re-run with dry_run=false to move bytes
+      tags: [utils, reconcile, storage]
+
+    - name: utils-delete-byteless-artifacts
+      entrypoint: src/qptiff_pipeline/flows/delete_byteless_artifacts.py:delete_byteless_artifacts
+      description: "Permanently delete dbstorage Artifacts whose bytes are missing on disk AND no record references them (e.g. records left after deleting the old flat training/rois/predictions folders). dry_run=true logs the plan."
+      work_pool:
+          name: hpc-ssh-pool
+          job_variables:
+              image: "{{ $CLINICALOMX_SITE_IMAGE_REGISTRY }}/comx-qptiff:cx0.1.0-bio23e46aa" # fallback; docker_ref comes from the SIF artifact
+              sif_artifact: "environments/{{ $CLINICALOMX_SITE_IMAGE_OWNER }}/comx-qptiff_cx0.1.0-bio23e46aa.sif" # SIF (kind=environment); if missing, worker pulls docker_ref
+              registry_auth_block: ghcr-croi
+              apptainer_cachedir: "{{ $CLINICALOMX_SITE_HPC_ALIAS }}/apptainer_cache"
+              cpus_per_task: 2
+              mem: 8G
+              walltime: "2:00:00"
+              qos: short
+      parameters:
+          storage_root: "{{ $CLINICALOMX_SITE_HPC_ROOT }}"
+          dry_run: true # review the PLAN-DELETE / SKIP-REFERENCED list first; re-run with dry_run=false
+      tags: [utils, cleanup, byteless]
+
+    - name: utils-reset-all-roi
+      entrypoint: src/qptiff_pipeline/flows/reset_all_roi.py:reset_all_roi
+      description: "DESTRUCTIVE clean slate: delete ALL Core/TMA/WholeSlide records + all dbstorage artifacts + every Collection made only of them (raw qptiffs in the raw collection, and every Collection with a member in another Storage, are KEPT), so the pipeline repopulates from scratch. dry_run=true reports counts; apply requires confirm='wipe-clinicalomx'."
+      work_pool:
+          name: hpc-ssh-pool
+          job_variables:
+              image: "{{ $CLINICALOMX_SITE_IMAGE_REGISTRY }}/comx-qptiff:cx0.1.0-bio23e46aa" # fallback; docker_ref comes from the SIF artifact
+              sif_artifact: "environments/{{ $CLINICALOMX_SITE_IMAGE_OWNER }}/comx-qptiff_cx0.1.0-bio23e46aa.sif" # SIF (kind=environment); if missing, worker pulls docker_ref
+              registry_auth_block: ghcr-croi
+              apptainer_cachedir: "{{ $CLINICALOMX_SITE_HPC_ALIAS }}/apptainer_cache"
+              cpus_per_task: 2
+              mem: 16G
+              walltime: "3:00:00"
+              qos: short
+      parameters:
+          storage_root: "{{ $CLINICALOMX_SITE_HPC_ROOT }}"
+          dry_run: true # counts only; to APPLY re-run with dry_run=false AND confirm=wipe-clinicalomx
+      tags: [utils, reset, clean-slate]
+
+    - name: pipeline-data-tests
+      entrypoint: src/qptiff_pipeline/flows/data_tests.py:data_tests
+      description: "READ-ONLY data invariants over the instance (ROI anchoring, parentage, name uniqueness, stage/state agreement, source freshness, parquet contract). Detection only - the utils-* flows remediate. Fails the run on any error-severity finding."
+      work_pool:
+          name: hpc-ssh-pool
+          job_variables:
+              image: "{{ $CLINICALOMX_SITE_IMAGE_REGISTRY }}/croi-core-inference:v0.3.5" # fallback; docker_ref comes from the SIF artifact
+              sif_artifact: "environments/{{ $CLINICALOMX_SITE_IMAGE_OWNER }}/croi-core-inference_v0.3.5.sif" # needs geopandas for the parquet contract check
+              registry_auth_block: ghcr-croi
+              apptainer_cachedir: "{{ $CLINICALOMX_SITE_HPC_ALIAS }}/apptainer_cache"
+              cpus_per_task: 2
+              mem: 8G
+              walltime: "1:00:00"
+              qos: short
+      parameters:
+          include_storage: true
+      schedules:
+          - interval: 604800
+      tags: [pipeline, checks, roi]
+
+    - name: pipeline-data-tests-vm
+      entrypoint: src/qptiff_pipeline/flows/data_tests.py:data_tests
+      description: "READ-ONLY data invariants that need METADATA ONLY - 13 of 17. Runs on the control plane, so no SIF, no SLURM queue and the database is local. The 4 byte-reading checks (source freshness, parquet contract) are HPC-only; see pipeline-data-tests."
+      work_pool:
+          name: vm-pool
+      pull:
+          - prefect.deployments.steps.set_working_directory:
+                directory: /opt/clinicalomx_data_platform/current/packages/clinicalomx_pipelines/qptiff_pipeline
+      parameters:
+          include_storage: false
+      schedules:
+          - interval: 86400
+      tags: [pipeline, checks, roi]
+
+    - name: utils-restore-trashed-artifacts
+      entrypoint: src/qptiff_pipeline/flows/restore_trashed_artifacts.py:restore_trashed_artifacts
+      description: "Undo reprocess-storage-migration's collateral trashing: un-trash any trashed artifact still referenced by an ACTIVE record. Metadata-only (branch->active); preserves keys/bytes. dry_run=true logs the plan."
+      work_pool:
+          name: hpc-ssh-pool
+          job_variables:
+              image: "{{ $CLINICALOMX_SITE_IMAGE_REGISTRY }}/comx-qptiff:cx0.1.0-bio23e46aa" # fallback; docker_ref comes from the SIF artifact
+              sif_artifact: "environments/{{ $CLINICALOMX_SITE_IMAGE_OWNER }}/comx-qptiff_cx0.1.0-bio23e46aa.sif" # SIF (kind=environment); if missing, worker pulls docker_ref
+              registry_auth_block: ghcr-croi
+              apptainer_cachedir: "{{ $CLINICALOMX_SITE_HPC_ALIAS }}/apptainer_cache"
+              cpus_per_task: 2
+              mem: 8G
+              walltime: "2:00:00"
+              qos: short
+      parameters:
+          storage_root: "{{ $CLINICALOMX_SITE_HPC_ROOT }}"
+          dry_run: true # review the PLAN-RESTORE list + counts first; re-run with dry_run=false to apply
+      tags: [utils, restore, amend]
+
+    - name: utils-build-environments
+      entrypoint: src/qptiff_pipeline/flows/build_environments.py:build_environments
+      description: "Materialise every declared SIF environment that is missing, once, under a lock, so no compute job ever builds one mid-run."
+      work_pool:
+          name: hpc-ssh-pool
+          job_variables:
+              image: "{{ $CLINICALOMX_SITE_IMAGE_REGISTRY }}/comx-qptiff:cx0.1.0-bio23e46aa" # fallback; docker_ref comes from the SIF artifact
+              sif_artifact: "environments/{{ $CLINICALOMX_SITE_IMAGE_OWNER }}/comx-qptiff_cx0.1.0-bio23e46aa.sif" # SIF (kind=environment); if missing, worker pulls docker_ref
+              registry_auth_block: ghcr-croi
+              cpus_per_task: 2
+              mem: 8G
+              walltime: "2:00:00"
+              qos: short
+      concurrency_limit: 1
+      parameters:
+          storage_root: "{{ $CLINICALOMX_SITE_HPC_ALIAS }}"
+      tags: [utils, environment, release]
+
+    - name: pipeline-harvest-feedback
+      entrypoint: src/qptiff_pipeline/flows/harvest_feedback.py:harvest_feedback
+      description: "Curate human-EDITED accepted labels into the per-stage training-reference Collection(s) (metadata-only; refs, no byte copy)."
+      work_pool:
+          name: vm-pool # DB-only now (references accepted artifacts); no image bytes, no SIF
+      pull:
+          - prefect.deployments.steps.set_working_directory:
+                directory: /opt/clinicalomx_data_platform/current/packages/clinicalomx_pipelines/qptiff_pipeline
+      parameters:
+          stage: all # "general" | "core" | "all"
+          dry_run: false
+      concurrency_limit: 1
+      schedules:
+          - interval: 86400 # 24h
+      tags: [pipeline, core, general, training, feedback]
+
+    - name: pipeline-mint-slides
+      entrypoint: src/qptiff_pipeline/flows/mint_slides.py:mint_slides
+      description: "Mint a WholeSlide Record (registered) per new qptiff Artifact."
+      work_pool:
+          name: vm-pool
+      pull:
+          - prefect.deployments.steps.set_working_directory:
+                directory: /opt/clinicalomx_data_platform/current/packages/clinicalomx_pipelines/qptiff_pipeline
+      parameters:
+          suffix: .qptiff
+      # No schedule: triggered by register-qptiffs-mint-slides automation
+      tags: [pipeline, ingest, roi, artifact]
+
+    - name: pipeline-check-general-detect
+      entrypoint: src/qptiff_pipeline/flows/check_general_detect.py:check_general_detect
+      description: "VM gate: launch general-detect only when registered WholeSlides exist and none is in flight."
+      work_pool:
+          name: vm-pool
+      pull:
+          - prefect.deployments.steps.set_working_directory:
+                directory: /opt/clinicalomx_data_platform/current/packages/clinicalomx_pipelines/qptiff_pipeline
+      concurrency_limit: 1
+      schedules:
+          - interval: 86400
+      tags: [pipeline, inference, detect, gate]
+
+    - name: pipeline-ensure-qptiffs-checked
+      entrypoint: src/qptiff_pipeline/flows/ensure_qptiffs_checked.py:ensure_qptiffs_checked
+      description: "VM supervisor: re-trigger check-qptiffs until every qptiff has an integrity mark."
+      work_pool:
+          name: vm-pool
+      pull:
+          - prefect.deployments.steps.set_working_directory:
+                directory: /opt/clinicalomx_data_platform/current/packages/clinicalomx_pipelines/qptiff_pipeline
+      schedules:
+          - interval: 259200 # every 3 days
+      tags: [pipeline, ingest]
+
+    - name: pipeline-sync-model-aliases
+      entrypoint: src/qptiff_pipeline/flows/sync_model_aliases.py:sync_model_aliases
+      description: "Mirror MLflow model aliases into lamindb (subscribe) + report drift."
+      work_pool:
+          name: vm-pool
+      pull:
+          - prefect.deployments.steps.set_working_directory:
+                directory: /opt/clinicalomx_data_platform/current/packages/clinicalomx_pipelines/qptiff_pipeline
+      schedules:
+          - interval: 86400 # daily
+      tags: [pipeline, model, sync]

@@ -1,0 +1,211 @@
+name: clinical-image-roi-object-detection
+prefect-version: ">=3.6"
+
+# Every {{ $NAME }} below is a site value from site.env, which scripts/site/render.py writes from
+# site.yaml. Register with scripts/site/deploy.sh: it renders, then refuses to run `prefect deploy`
+# while any such name is unset, because Prefect registers an unset one as literal text.
+
+# Training runs in the croi-<obj>-train container (eval + MLflow), NOT the inference image.
+#
+# WHAT THIS PULL STILL BRINGS IN, AND WHAT IT NO LONGER DOES. Since BOTH objectives re-layered
+# it brings in the thin ENTRYPOINT modules and nothing else that runs: a flow body resolves
+# `import croi` out of the `clinical-roi[train]` wheel baked into the image,
+# because Prefect's `load_script_as_module` puts only the entrypoint's own directory and the
+# working directory on `sys.path`, never `roi_detection/src`. The configs come from the wheel
+# too, as package data. So a fix under `src/croi/` needs a NEW `clinical-roi-v*` tag and an
+# image adoption; moving this tag alone registers the change and does not run it.
+# Authed by the github-croi-pat Secret (same block the clinicalomx-pipeline deployments use -
+# it must have read access to the monorepo too).
+#
+# Stage 3 replaced the split repo's `git_clone main` with a clone of the monorepo PINNED
+# to the platform release tag, chained into this package's directory so the entrypoints
+# stay package-relative. Bump the tag here in the
+# same commit that gets tagged.
+#
+# platform-v26 AND v0.3.0 MOVE IN ONE COMMIT. `clinical-roi` 0.3.0 adds RF-DETR beside YOLO
+# behind one framework seam, and the train flows gained a `config` parameter. That parameter lives
+# in the ENTRYPOINT module, which arrives through this pull, while the stage configs and trainers
+# arrive in the wheel, so a tag carrying the new entrypoints against a v0.2.2 image fails
+# `config=3_train_and_eval_rfdetr.yaml` at config load. Both halves move here or neither does.
+#
+# platform-v27 carries `tools/recover_annotated_images_flow.py`, the entrypoint of
+# `utils-recover-annotated-images` below, and changes no train entrypoint: nothing under
+# `src/<obj>/pipelines/` differs from platform-v26. Registering that deployment at an older tag
+# fails at load with no file to import.
+# That file moved to `src/croi/objectives/tma_core/flows/tma_core_recover.py` at platform-v32,
+# whose note is below.
+#
+# platform-v28 carries `src/core/pipelines/prepare.py`, the entrypoint of `ingest-labels-core` and
+# `split-core` below, and changes no other entrypoint here. It is the SAME tag the pipelines
+# project moves to for `utils-reset-all-roi` (section AT), so one cut, assemble and flip ships
+# both; the tag must be cut after this change merges. Registering those two at an older tag fails
+# at load with no file to import.
+#
+# platform-v33 moves NO IMAGE and NO ENTRYPOINT. The pull step below passes the token as
+# `credentials: {username: x-access-token, access_token: ...}` where it passed a bare `access_token`,
+# because every croi image from v0.3.4 on carries Ubuntu's libcurl3-gnutls 7.81.0-1ubuntu1.30, under
+# which git 2.34.1 drops a token-only URL credential after its first request. All five deployments
+# here failed `git_clone` with `RPC failed; HTTP 401` before their flows started. The tag moves because
+# `prefect deploy` registers the pull step from the release tree, so the change reaches the server only
+# through a release. The pipelines project moves to the same tag in the same commit.
+#
+# platform-v32 AND v0.3.5 MOVE IN ONE COMMIT, with the `utils-recover-annotated-images` entrypoint.
+# It names `src/croi/objectives/tma_core/flows/tma_core_recover.py`, where the operator tools moved
+# from `tools/`; platform-v31 holds only `tools/recover_annotated_images_flow.py`, so registering it
+# there fails at load with no file to import. That file imports
+# `croi.objectives.tma_core.recover_annotated_images` from the wheel, which only v0.3.5 carries, so
+# the tag and the image move together. The flow name `recover-annotated-images` and the deployment
+# name are unchanged, and the four train and data-stage entrypoints do not move. The pipelines
+# project moves to the same tag in the same commit.
+#
+# platform-v31 AND v0.3.4 MOVE IN ONE COMMIT, with the four train and data-stage entrypoints. They
+# name `src/croi/objectives/<obj>/flows/`, where the MLOps-patterns restructure moved them from
+# `src/croi/flows/`; platform-v30 holds only the old paths, so registering them there fails at load
+# with no file to import. The image moves for the pipelines project's detect flows: `clinical-roi`
+# 0.3.4 renamed `croi.data` to `croi.utils`, so platform-v31's detect flows fail `No module named
+# 'croi.utils'` against a v0.3.2 image, and platform-v30's fail `No module named 'croi.data'`
+# against a v0.3.4 one. The pipelines project moves to the same tag in the same commit.
+#
+# platform-v30 AND v0.3.2 MOVE IN ONE COMMIT, with the four `src/croi/flows/` entrypoints. The
+# `core`/`general` packages are gone from `clinical-roi` 0.3.2, so the old `src/<obj>/pipelines/`
+# entrypoints against a v0.3.2 image fail `No module named 'core'`, and the new ones against a v0.3.1
+# image fail `No module named 'croi.objectives'`. The pipelines project moves to the same tag in the
+# same commit.
+#
+# platform-v29 AND v0.3.1 MOVE IN ONE COMMIT, and the reason is the image, not the entrypoints:
+# nothing under `src/<obj>/pipelines/` differs from platform-v28. `clinical-roi` 0.3.1's shared base
+# carries `gcc` + `libc6-dev`, without which RF-DETR dies on its first training step with
+# `Failed to find C compiler` (Triton builds a C stub on compute capability 8.0 and above). The
+# pipelines project moves to the same tag in the same commit.
+#
+# `clinical-roi-v0.2.2` is the first croi release whose `img-croi` run sets
+# `SIF_MODES: "inference train"`, so `croi-general-train-sif` and `croi-core-train-sif` exist at
+# every croi tag since. That matters because a deployment may only name a tag
+# whose SIF exists, because the HPC worker cannot build one itself (unprivileged apptainer ->
+# `mksquashfs` under `proot` -> no `ptrace`).
+pull:
+    - prefect.deployments.steps.git_clone:
+          id: clone
+          repository: "https://github.com/{{ $CLINICALOMX_SITE_REPOSITORY }}.git"
+          branch: platform-v33
+          # The username is load-bearing, not redundant. Ubuntu's libcurl3-gnutls 7.81.0-1ubuntu1.30
+          # (CVE-2026-94266) stopped returning credentials in CURLINFO_EFFECTIVE_URL, so git 2.34.1
+          # reads a token-only URL as a redirect, drops the token after its first request, and the
+          # clone fails `RPC failed; HTTP 401`. Every croi image from v0.3.4 on carries that libcurl.
+          # Prefect builds `x-access-token:<token>@` from this pair, and git keeps a credential that
+          # has a password on its connection. Do not go back to a bare `access_token:`, and do not
+          # move the token into a ~/.netrc.
+          credentials:
+              username: x-access-token
+              access_token: "{{ prefect.blocks.secret.github-croi-pat }}"
+    - prefect.deployments.steps.set_working_directory:
+          directory: "{{ clone.directory }}/packages/clinicalomx_ml/roi_detection"
+
+deployments:
+    # ---- GPU training (hpc-ssh-pool, croi-<obj>-train SIFs) ----
+    # gpu: sets the GPU type; the worker derives partition (gpu_cuda) + qos + gres.
+    # No schedule: training is triggered manually (prefect deployment run ...), optionally
+    # with --param eval_only=true --param weights=version:<n> to re-eval a champion.
+    - name: train-general
+      entrypoint: src/croi/objectives/tissue_objects/flows/tissue_objects_train.py:general_train_and_eval
+      description: "Train + eval the general ROI detector (YOLO) on an HPC GPU node."
+      work_pool:
+          name: hpc-ssh-pool
+          job_variables:
+              image: "{{ $CLINICALOMX_SITE_IMAGE_REGISTRY }}/croi-general-train:v0.3.5" # fallback; docker_ref comes from the SIF artifact
+              sif_artifact: "environments/{{ $CLINICALOMX_SITE_IMAGE_OWNER }}/croi-general-train_v0.3.5.sif" # SIF (kind=environment); if missing, worker pulls docker_ref
+              registry_auth_block: ghcr-croi
+              apptainer_cachedir: "{{ $CLINICALOMX_SITE_USER_SCRATCH_ROOT }}/{{ $CLINICALOMX_SITE_HPC_USER }}/apptainer_cache"
+              gpu: a100
+              gpu_count: 1
+              cpus_per_task: 16
+              mem: 64G
+              walltime: "12:00:00"
+      tags: [train, general, gpu]
+
+    - name: train-core
+      entrypoint: src/croi/objectives/tma_core/flows/tma_core_train.py:core_train_and_eval
+      description: "Train + eval the core (dearray) ROI detector (YOLO) on an HPC GPU node."
+      work_pool:
+          name: hpc-ssh-pool
+          job_variables:
+              image: "{{ $CLINICALOMX_SITE_IMAGE_REGISTRY }}/croi-core-train:v0.3.5" # fallback; docker_ref comes from the SIF artifact
+              sif_artifact: "environments/{{ $CLINICALOMX_SITE_IMAGE_OWNER }}/croi-core-train_v0.3.5.sif" # SIF (kind=environment); if missing, worker pulls docker_ref
+              registry_auth_block: ghcr-croi
+              apptainer_cachedir: "{{ $CLINICALOMX_SITE_USER_SCRATCH_ROOT }}/{{ $CLINICALOMX_SITE_HPC_USER }}/apptainer_cache"
+              gpu: a100
+              gpu_count: 1
+              cpus_per_task: 16
+              mem: 64G
+              walltime: "12:00:00"
+      tags: [train, core, gpu]
+
+    # ---- One-off recovery (hpc-ssh-pool, croi-core-train SIF, no GPU) ----
+    # Rebuilds clinical-roi/core/annotated_images v1 from core_labels/* run lineage, the flow form
+    # of croi.objectives.tma_core.recover_annotated_images. The entrypoint arrives with the pull tag
+    # above and imports that module from the train image's wheel, which is why this names the train
+    # SIF the runbook ran the script in, and why the entrypoint, the pull tag and the image move in
+    # one adoption. Defaults write NOTHING (the check pass):
+    #   prefect deployment run recover-annotated-images/utils-recover-annotated-images
+    #   ... --param accept_by_name_links=true   (accept P6's by-name links, still writes nothing)
+    #   ... --param apply=true                  (write, only when the checks read CLEAR)
+    # Runbook: roi_detection/docs/recover-annotated-images.md.
+    - name: utils-recover-annotated-images
+      entrypoint: src/croi/objectives/tma_core/flows/tma_core_recover.py:recover_annotated_images
+      description: "Check (default, writes nothing) or rebuild clinical-roi/core/annotated_images v1 from core label lineage."
+      work_pool:
+          name: hpc-ssh-pool
+          job_variables:
+              image: "{{ $CLINICALOMX_SITE_IMAGE_REGISTRY }}/croi-core-train:v0.3.5" # fallback; docker_ref comes from the SIF artifact
+              sif_artifact: "environments/{{ $CLINICALOMX_SITE_IMAGE_OWNER }}/croi-core-train_v0.3.5.sif" # SIF (kind=environment); if missing, worker pulls docker_ref
+              registry_auth_block: ghcr-croi
+              apptainer_cachedir: "{{ $CLINICALOMX_SITE_USER_SCRATCH_ROOT }}/{{ $CLINICALOMX_SITE_HPC_USER }}/apptainer_cache"
+              cpus_per_task: 2
+              mem: 8G
+              walltime: "1:00:00"
+      parameters:
+          apply: false
+          accept_by_name_links: false
+      tags: [utils, core, recovery]
+
+    # ---- The core data stages (hpc-ssh-pool, croi-core-train SIF, no GPU) ----
+    # `python -m core ingest-labels` and `python -m core split` as flows, in the order the chain
+    # runs: utils-recover-annotated-images, then these two, then train-core. Each calls the
+    # stage's own `run` unchanged and ends on a verdict line (WROTE or UNCHANGED). Both are safe
+    # to re-run: a label key that exists is reused and an unchanged Collection is not re-versioned.
+    # `config` is the CLI's `--config`, the only option either stage takes.
+    #   prefect deployment run core-ingest-labels/ingest-labels-core --watch
+    #   prefect deployment run core-split/split-core --watch
+    - name: ingest-labels-core
+      entrypoint: src/croi/objectives/tma_core/flows/tma_core_prepare.py:core_ingest_labels
+      description: "Register core labels against clinical-roi/core/annotated_images and bundle clinical-roi/core."
+      work_pool:
+          name: hpc-ssh-pool
+          job_variables:
+              image: "{{ $CLINICALOMX_SITE_IMAGE_REGISTRY }}/croi-core-train:v0.3.5" # fallback; docker_ref comes from the SIF artifact
+              sif_artifact: "environments/{{ $CLINICALOMX_SITE_IMAGE_OWNER }}/croi-core-train_v0.3.5.sif" # SIF (kind=environment); if missing, worker pulls docker_ref
+              registry_auth_block: ghcr-croi
+              apptainer_cachedir: "{{ $CLINICALOMX_SITE_USER_SCRATCH_ROOT }}/{{ $CLINICALOMX_SITE_HPC_USER }}/apptainer_cache"
+              cpus_per_task: 2
+              mem: 8G
+              walltime: "1:00:00"
+      parameters:
+          config: 1_ingest_labels.yaml
+      tags: [data, core]
+
+    - name: split-core
+      entrypoint: src/croi/objectives/tma_core/flows/tma_core_prepare.py:core_split
+      description: "Split clinical-roi/core into slide-stratified train/val/test Collections."
+      work_pool:
+          name: hpc-ssh-pool
+          job_variables:
+              image: "{{ $CLINICALOMX_SITE_IMAGE_REGISTRY }}/croi-core-train:v0.3.5" # fallback; docker_ref comes from the SIF artifact
+              sif_artifact: "environments/{{ $CLINICALOMX_SITE_IMAGE_OWNER }}/croi-core-train_v0.3.5.sif" # SIF (kind=environment); if missing, worker pulls docker_ref
+              registry_auth_block: ghcr-croi
+              apptainer_cachedir: "{{ $CLINICALOMX_SITE_USER_SCRATCH_ROOT }}/{{ $CLINICALOMX_SITE_HPC_USER }}/apptainer_cache"
+              cpus_per_task: 2
+              mem: 8G
+              walltime: "1:00:00"
+      parameters:
+          config: 2_split.yaml
+      tags: [data, core]

@@ -1,0 +1,27 @@
+# Authenticate as an application credential, not as your own account.
+export OS_AUTH_TYPE=v3applicationcredential
+
+# Ceph RGW zonegroup for the state backend. 
+export AWS_REGION=us-east-1
+
+# The cloud's Keystone. Same value as control_plane.os_auth_url in the tfvars.
+export OS_AUTH_URL=https://keystone.example.edu/v3/
+
+# The object store's S3 endpoint, for the state backend, which cannot read a
+# variable. Same value as package_index.s3_endpoint in the tfvars.
+export AWS_ENDPOINT_URL_S3=https://objects.example.edu/
+
+# The object store container that holds the tofu state, created once
+# (deployment.md step 2). Every tofu init reads it from here.
+export TF_CLI_ARGS_init=-backend-config=bucket=replace-me
+
+# nectar rc source
+export OS_APPLICATION_CREDENTIAL_ID=replace-me
+export OS_APPLICATION_CREDENTIAL_SECRET=replace-me
+
+# openstack ec2 credentials create/list
+export AWS_ACCESS_KEY_ID=replace-me
+export AWS_SECRET_ACCESS_KEY=replace-me
+
+# set this manually/autogenerate
+export TF_VAR_state_encryption_passphrase=replace-me

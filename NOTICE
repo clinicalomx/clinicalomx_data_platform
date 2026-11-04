@@ -1,0 +1,111 @@
+clinicalOMx data platform
+Copyright 2026 ClinicalOMXLab
+
+This product is licensed under the Apache License, Version 2.0. See LICENSE.
+
+It carries, depends on, or builds container images from the separately
+licensed works below. Each keeps its own licence.
+
+
+Carried in this repository
+==========================
+
+OMOP Common Data Model specification
+  Files:   packages/clinicalomx_omop/spec/OMOP_CDMv5.4_*.csv
+  Source:  https://github.com/OHDSI/CommonDataModel, tag v5.4.3
+  Licence: Apache-2.0, as the upstream DESCRIPTION file declares.
+  Redistributed unmodified. spec/source.toml records the commit and checksums.
+
+UniProt Knowledgebase
+  Files:   packages/clinicalomx_markers/tests/fixtures/uniprot/*.json, and the
+           UniProt text quoted in
+           packages/clinicalomx_markers/src/clinicalomx_markers/seed_data/
+  Source:  The UniProt Consortium, https://www.uniprot.org
+  Licence: CC BY 4.0, https://www.uniprot.org/help/license
+  Each fixture records the UniProt release it was captured from.
+
+Gene Ontology
+  Files:   the GO identifiers and term names in
+           packages/clinicalomx_markers/src/clinicalomx_markers/seed_data/structures.csv
+  Source:  The Gene Ontology Consortium, https://geneontology.org
+  Licence: CC BY 4.0
+
+Fabric.js 5.3.0
+  File:    packages/clinicalomx_pipelines/qptiff_pipeline/src/qptiff_pipeline/
+           review/roi_canvas/frontend/fabric.min.js
+  Source:  https://github.com/fabricjs/fabric.js, tag v5.3.0
+  Licence: MIT. Copyright (c) 2008-2015 Printio (Juriy Zaytsev, Maxim Chernyak).
+  The full licence sits beside the file in fabric.min.js.LICENSE.txt.
+
+Radix Colors
+  Files:   the colour scales in section 1 of docs/design/build-app/tokens.css
+           and of packages/clinicalomx/src/clinicalomx/extract/app/web/design/tokens.css
+  Source:  https://github.com/radix-ui/colors
+  Licence: MIT. Copyright (c) 2021-2022 Modulz, Copyright (c) 2022-Present WorkOS.
+
+
+Declared dependencies
+=====================
+
+A pyproject.toml names these and an installer fetches them. Their code is not
+in this repository. The list holds every dependency that is copyleft or that
+installs from git rather than PyPI. Every other direct third-party dependency
+installs from PyPI under a permissive licence.
+
+bgnorm (bgnormPy)
+  Declared: packages/clinicalomx_pipelines/pyproject.toml
+  Source:   https://github.com/BhuvaLab/bgnormPy, tag v0.1.2
+  Licence:  GPL-3.0. The full text is the LICENSE file in that repository.
+
+  This repository declares bgnorm as a dependency and does not include its
+  code, so this repository's own Apache-2.0 licence is unaffected. The bgnorm
+  container image, packages/clinicalomx_pipelines/qptiff_pipeline/containers/
+  Dockerfile.bgnorm, is built FROM the upstream ghcr.io/bhuvalab/bgnormpy image
+  and installs this repository's code on top, so it bundles GPL-3.0 code.
+  Publishing that image distributes a combined work, and GPL-3.0 terms attach
+  to it.
+
+ultralytics
+  Declared: packages/clinicalomx_ml/pyproject.toml, a base dependency of
+            clinical-roi
+  Source:   PyPI, https://github.com/ultralytics/ultralytics
+  Licence:  AGPL-3.0
+
+  The same split applies. The declaration leaves this repository's licence
+  unaffected. Every croi image built from packages/clinicalomx_ml/roi_detection/
+  containers/ installs ultralytics, so publishing a croi image distributes a
+  combined work, and AGPL-3.0 terms attach to it.
+
+psycopg2-binary
+  Declared: packages/clinicalomx_ledger/pyproject.toml, the hpc worker, and
+            the pg test extras of clinicalomx_markers and clinicalomx_omop
+  Source:   PyPI, https://github.com/psycopg/psycopg2
+  Licence:  LGPL-3.0-or-later, with an exception for linking OpenSSL.
+
+bioio-qptiff
+  Declared: packages/clinicalomx_ml/pyproject.toml, and installed at a pinned
+            commit by Dockerfile.qptiff and Dockerfile.extract
+  Source:   https://github.com/rtubelleza/bioio-qptiff
+  Licence:  BSD-3-Clause. Copyright (c) 2026, Rafael Tubelleza. Portions
+            Copyright (c) 2023, Bio IO Devs, also BSD-3-Clause.
+
+
+Container base images
+=====================
+
+ghcr.io/bhuvalab/bgnormpy:v0.1.2
+  Base of Dockerfile.bgnorm. GPL-3.0; see bgnorm above.
+
+nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04
+  Base of the croi images. The image and its contents are governed by the NVIDIA
+  Deep Learning Container License,
+  https://developer.nvidia.com/ngc/nvidia-deep-learning-container-license
+  Publishing a croi image redistributes those NVIDIA components.
+
+python:3.11-slim, python:3.12-slim, python:3.12
+  Docker Official Images: CPython under the PSF License on Debian, whose
+  packages carry their own licences.
+
+Images that a docker-compose file pulls and runs unmodified, such as Postgres,
+Grafana, Prefect and MLflow, are not built or redistributed here, so they are
+not listed.

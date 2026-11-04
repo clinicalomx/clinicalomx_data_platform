@@ -1,0 +1,90 @@
+# CI for packages/clinicalomx_ml
+name: pkg-clinicalomx-ml
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/clinicalomx_ml/**"
+      - "packages/clinicalomx/**"
+      - ".github/workflows/pkg-clinicalomx-ml.yml"
+  pull_request:
+    paths:
+      - "packages/clinicalomx_ml/**"
+      - "packages/clinicalomx/**"
+      - ".github/workflows/pkg-clinicalomx-ml.yml"
+
+defaults:
+  run:
+    working-directory: packages/clinicalomx_ml
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      # The lock is consistent with pyproject.toml. --offline on purpose and not for want of a
+      # secret: it resolves from the lock's own universe, so it answers "is this lock up to date
+      # with this manifest" without a private-index read. It cannot see a NEWER clinicalomx on the
+      # index, which is not what --check is for.
+      - name: Lock matches the manifest
+        run: uv lock --check --offline
+
+      # The wheel builds, which is what a release tag will do. Catches a hatch target naming a
+      # source tree that moved - the failure mode a multi-source-tree wheel invites.
+      - name: Build
+        run: uv build
+
+      # THE ONE CHECK THAT WOULD HAVE CAUGHT THE dev-mode-dirs DEFECT. `uv build` above proves the
+      # WHEEL is right, and the wheel always was; what silently lost a source root is the editable
+      # `.pth` hatchling writes from the `packages` MAP, whose entries collapse when two share a
+      # destination. That is why `dev-mode-dirs` existed, and Phase 2 removed the collision rather
+      # than the workaround: `roi_detection/tests/test_packaging.py` refuses two roots sharing a destination and
+      # names the cause quickly, while this executes an install and asks what it produced.
+      #
+      # --no-deps deliberately: the property under test is the sys.path an editable install writes,
+      # not the dependency graph, and resolving the graph needs the private index credential this
+      # job does not hold. find_spec rather than an import, because these modules import lamindb at
+      # module scope and CI has no instance.
+      #
+      # One root, `croi`; each objective is a package under `croi.objectives`.
+      - name: An editable install resolves every tree
+        run: |
+          uv venv /tmp/croi-editable
+          VIRTUAL_ENV=/tmp/croi-editable uv pip install --no-deps -e .
+          /tmp/croi-editable/bin/python - <<'PY'
+          import importlib.util, sys
+
+          def resolves(name):
+              try:
+                  return importlib.util.find_spec(name) is not None
+              except ModuleNotFoundError:
+                  return False
+
+          expected = (
+              "croi", "croi.detection", "croi.detection.backends", "croi.evaluation",
+              "croi.flows", "croi.io", "croi.objectives", "croi.objectives.tissue_objects",
+              "croi.objectives.tissue_objects.flows", "croi.objectives.tma_core",
+              "croi.objectives.tma_core.flows", "croi.utils",
+          )
+          missing = [m for m in expected if not resolves(m)]
+          if missing:
+              sys.exit(f"editable install does not resolve: {missing}")
+          print(f"all {len(expected)} packages resolve")
+          PY
+
+      # 3.11 because every croi image runs it (`containers/base.Dockerfile`, `--python 3.11`) while
+      # the runner's own python is newer, so a 3.12-only stdlib name passes here and fails at
+      # import in production. `typing.override` in `croi.io.registries` did exactly that.
+      - name: Tests
+        run: uv run --no-project --python 3.11 --with pytest --with numpy --with pyyaml --with pydantic pytest roi_detection/tests -q
+
+      # roi_detection/tests/ only. The rest of this package has never had a lint gate and measured 72 default-rule
+      # findings when last counted, so linting it here would gate this phase on unrelated cleanup.
+      - name: Lint the test suite
+        run: uv run --no-project --with ruff ruff check --no-cache roi_detection/tests

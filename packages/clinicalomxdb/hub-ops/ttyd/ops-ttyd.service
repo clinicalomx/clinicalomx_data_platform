@@ -1,0 +1,59 @@
+[Unit]
+Description=HPC login terminal for the operator portal (/ssh/)
+After=network-online.target
+Wants=network-online.target
+# ONE instance, not one per user. The terminal runs hpc-login.sh, which asks which HPC
+# account to authenticate and passes it to ssh with -o User; ControlPath's %r token then yields a
+# distinct socket per user with no ssh_config entry and no unit per user. That is what lets the
+# portal's connection table offer "add a connection" as a login rather than as a provisioning
+# task needing root.
+#
+# THREE PROPERTIES THAT ARE LOAD-BEARING (ADR 0004 Decision 6):
+#
+# 1. A HOST unit, never a container. The ssh process this spawns BECOMES the ControlMaster, so
+#    it has to live in the same home directory and namespace as the workers that reuse the
+#    socket, and must not die when a container is restarted.
+#
+# 2. The command is FIXED: hpc-login.sh and nothing else, never a shell. The account below is
+#    in the docker group, so a general shell here would be equivalent to root on this host.
+#    ttyd's --url-arg is deliberately NOT set, so the client cannot supply arguments at all, and
+#    the script validates the one value it reads. `ssh -e none` inside it disables the escape
+#    character so the session cannot be steered from the terminal.
+#
+# 3. A terminal, not a credential form. The password and second factor go from the browser into
+#    the ssh PTY directly, so no code here parses, logs, stores or holds them. A form posting
+#    credentials to this host would be a phishing-shaped surface and a custody responsibility,
+#    for no functional gain.
+#
+# Reachability: a unix socket under /run/ops-ttyd, bind-mounted into Caddy and proxied at /ssh/.
+# There is no TCP port, so it is reachable only through the portal, which is itself loopback-only
+# behind the operator SSH tunnel.
+
+[Service]
+Type=simple
+User=@RUN_USER@
+Group=@RUN_USER@
+# HOME decides where the ControlMaster sockets land, so it must be the account the workers run
+# as. Every HPC user's socket lives under this one system account; users are separated by which
+# HPC account each socket authenticates to, not by a local account each.
+Environment=HOME=@RUN_HOME@
+Environment=HPC_LOGIN_HOST=@HPC_LOGIN_HOST@
+RuntimeDirectory=ops-ttyd
+RuntimeDirectoryMode=0755
+# Preserve=yes: without it systemd removes the directory when this stops, and Caddy's bind mount
+# would then point at a deleted inode, silently breaking the terminal until Caddy restarted too.
+RuntimeDirectoryPreserve=yes
+# A socket left behind by an unclean stop would make bind fail, and Restart=always would loop.
+ExecStartPre=-/bin/rm -f /run/ops-ttyd/login.sock
+ExecStart=/usr/bin/ttyd --interface /run/ops-ttyd/login.sock --base-path /ssh \
+    --terminal-type xterm-256color \
+    --ping-interval 30 \
+    @TTYD_DIR@/hpc-login.sh
+Restart=always
+RestartSec=5
+
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,15 @@
+# CONSTRAINTS PROMOTED FROM REJECTIONS.
+#
+# The column contract is declared in ../seed_spec.py, not here, and seed_data/README.md is
+# generated from it. A renamed or missing column fails on read.
+#
+# When a human rejects a proposal with kind=rule, the correction lands here and load
+# enforces it, so the agent cannot propose it again. Without this the same mistake recurs
+# forever and the human does the same work repeatedly.
+#
+# predicate      which claim predicate the rule constrains
+# when_field     a field on the subject to test (e.g. compartment)
+# when_contains  substring match, case-insensitive
+# forbid_value   the value that must not be proposed
+predicate,when_field,when_contains,forbid_value,reason,added_by
+segmentation_role,compartment,mitochondrion,cyto_structural,mitochondrial markers are not whole-cell morphology channels,seed

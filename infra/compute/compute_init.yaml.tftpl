@@ -1,0 +1,50 @@
+#cloud-config
+
+write_files:
+  - path: /etc/profile.d/clinicalomx.sh
+    permissions: '0644'
+    content: |
+      export MLFLOW_TRACKING_URI="${mlflow_tracking_uri}"
+      export LAMIN_INSTANCE="${lamin_instance}"
+      export LAMIN_DB_HOST_OVERRIDE=postgres
+
+runcmd:
+  - grep -q ' postgres$' /etc/hosts || echo "${hub_private_ip} postgres clinicalomxdb_postgres" >> /etc/hosts
+
+  - |
+    DEV="${home_device}"
+    echo "waiting for $DEV ..."
+    for i in $(seq 1 60); do [ -e "$DEV" ] && break; sleep 2; done
+    if ! blkid "$DEV" >/dev/null 2>&1; then mkfs.ext4 -F "$DEV"; fi
+    grep -q ' /home ' /etc/fstab || echo "$DEV /home ext4 defaults,nofail 0 2" >> /etc/fstab
+    mount "$DEV" /home
+
+  # persist host ssh keys
+  - |
+    KD=/home/.ssh_host_keys
+    if ls "$KD"/ssh_host_*_key >/dev/null 2>&1; then
+      cp -a "$KD"/ssh_host_* /etc/ssh/
+      chmod 600 /etc/ssh/ssh_host_*_key
+      chmod 644 /etc/ssh/ssh_host_*_key.pub
+      systemctl restart ssh
+    else
+      mkdir -p "$KD"
+      cp -a /etc/ssh/ssh_host_* "$KD"/
+    fi
+
+  # one account per user, persist vars and auth on homes.
+  - |
+%{ for uname, u in users ~}
+    id -u ${uname} >/dev/null 2>&1 || useradd -m -s /bin/bash ${uname}
+    usermod -aG sudo ${uname}
+    getent group docker >/dev/null && usermod -aG docker ${uname} || true
+    printf '%s ALL=(ALL) NOPASSWD:ALL\n' ${uname} > /etc/sudoers.d/90-${uname}
+    chmod 440 /etc/sudoers.d/90-${uname}
+    install -d -m 700 /home/${uname}/.ssh
+    : > /home/${uname}/.ssh/authorized_keys
+%{ for k in u.ssh_authorized_keys ~}
+    echo '${k}' >> /home/${uname}/.ssh/authorized_keys
+%{ endfor ~}
+    chmod 600 /home/${uname}/.ssh/authorized_keys
+    chown -R ${uname}:${uname} /home/${uname}
+%{ endfor ~}

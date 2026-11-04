@@ -1,0 +1,50 @@
+# Publish `clinical-roi` to the private index on its release tag. 
+# the tag namespace is <distribution>-v<version>.
+
+# at 30c65cc.
+name: release-clinical-roi
+
+on:
+  push:
+    tags: ["clinical-roi-v*"]
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: packages/clinicalomx_ml
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    env:
+      INDEX_BUCKET: ${{ vars.INDEX_BUCKET }}
+      UV_S3_ENDPOINT_URL: ${{ vars.UV_S3_ENDPOINT_URL }}
+      AWS_REGION: us-east-1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Tag matches the declared version
+        run: |
+          tagged="${GITHUB_REF_NAME#clinical-roi-v}"
+          declared="$(uv version --short --color never)"
+          [ "$declared" = "$tagged" ] || {
+            echo "pyproject declares $declared, tag says $tagged" >&2
+            exit 1
+          }
+
+      - name: Build the distribution
+        run: uv build
+
+      - name: Publish to the private index
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.INDEX_PUBLISH_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.INDEX_PUBLISH_SECRET_ACCESS_KEY }}
+        run: uv run --no-project --with boto3 python ../clinicalomx/scripts/publish_index.py dist/*

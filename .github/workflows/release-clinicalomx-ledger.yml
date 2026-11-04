@@ -1,0 +1,79 @@
+# Publish clinicalomx_ledger to the private index on its release tag. 
+# the tag namespace is <distribution>-v<version> using the literal pyproject name.
+name: release-clinicalomx-ledger
+
+on:
+  push:
+    tags: ["clinicalomx_ledger-v*"]
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: packages/clinicalomx_ledger
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    env:
+      INDEX_BUCKET: ${{ vars.INDEX_BUCKET }}
+      UV_S3_ENDPOINT_URL: ${{ vars.UV_S3_ENDPOINT_URL }}
+      AWS_REGION: us-east-1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      # Both copies, for the reason release-clinicalomx-markers.yml states at length: the
+      # dunder is the one an installed image can be asked for, and a tag checked against
+      # pyproject alone would ship a wheel that misreports itself.
+      - name: Tag matches both declared versions
+        run: |
+          tagged="${GITHUB_REF_NAME#clinicalomx_ledger-v}"
+          declared="$(uv version --short --color never)"
+          dunder="$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' src/clinicalomx_ledger/__init__.py)"
+          fail=0
+          if [ "$declared" != "$tagged" ]; then
+            echo "pyproject.toml declares $declared, tag says $tagged" >&2
+            fail=1
+          fi
+          if [ "$dunder" != "$tagged" ]; then
+            echo "__init__.py declares '$dunder', tag says $tagged" >&2
+            fail=1
+          fi
+          exit "$fail"
+
+      # The lock is part of what the tag ships. No index credential: every private
+      # requirement in this project resolves through a path source next door.
+      - name: The lock matches the metadata
+        run: uv lock --check
+
+      - name: Build the sdist and the wheel
+        run: uv build
+
+      # The `store` extra is named explicitly because it is what markers and the lamindb
+      # image install, and it is the only part of this package that reaches clinicalomx: the
+      # base wheel would resolve from PyPI alone and prove nothing about the index.
+      # --no-sources drops the path entry that makes clinicalomx resolve next door, which is
+      # the substitution being tested. The wheel path is captured rather than globbed inline
+      # because `dist/*.whl[store]` reads as a shell character class.
+      - name: The built wheel resolves from the index
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.INDEX_READ_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.INDEX_READ_SECRET_ACCESS_KEY }}
+        run: |
+          whl="$(ls dist/*.whl)"
+          uv venv /tmp/resolve-probe -q
+          VIRTUAL_ENV=/tmp/resolve-probe uv pip install --dry-run --no-sources \
+            --extra-index-url "${UV_S3_ENDPOINT_URL}${INDEX_BUCKET}/simple/" \
+            --preview-features s3-endpoint \
+            "${whl}[store]"
+
+      - name: Publish to the private index
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.INDEX_PUBLISH_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.INDEX_PUBLISH_SECRET_ACCESS_KEY }}
+        run: uv run --no-project --with boto3 python ../clinicalomx/scripts/publish_index.py dist/*

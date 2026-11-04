@@ -1,0 +1,28 @@
+# REPORTER PRODUCT IDENTITY: which oligo reveals which antibody, and in what colour.
+#
+# The column contract is declared in ../spec.py, not here, and data/README.md is
+# generated from it. A renamed or missing column fails on read.
+#
+# A reporter carries an RX barcode; the antibody it reveals carries the matching BX barcode.
+# Equal numbers mean complementary oligo sequences. THE PAIRING IS THEREFORE DERIVABLE and
+# there is no pairing column here: ../inventory.py checks the number match instead. A
+# stored pairing would be a second source of truth that can disagree with the barcodes.
+#
+# fluorophore references fluorophores.csv by canonical_name, the same way channels.csv
+# references markers.csv. Every cross-file link here is by canonical name: these
+# files are reviewed as diffs, and a surrogate id makes a diff unreadable.
+#
+# akoya_id names Akoya's proprietary oligo product, and it identifies the antibody and its
+# reporter as ONE SET, so it is the SAME value on both rows. A set whose two sides disagree
+# on the oligo number is rejected at load. NA is a valid value and means a custom or in-house
+# conjugation, which has no bundled reporter and is exempt.
+#
+# The rows below are illustrative until the real inventory is imported. The akoya_id values
+# in particular are placeholders, not Akoya part numbers.
+#
+# status: active | draft   (draft rows are validated on every run but never seeded)
+rx_barcode,akoya_id,fluorophore,status
+RX001,AKY-001,ATTO550,draft
+RX002,AKY-002,ALEXA_FLUOR_647,draft
+RX003,AKY-003,ALEXA_FLUOR_750,draft
+RX004,NA,ATTO550,draft

@@ -1,0 +1,23 @@
+# The lamindb image builds with context: . and Dockerfile.lamindb ends in COPY . /hub, so this
+# directory IS the build context. Two of the three per-host paths in environment.example default to
+# a repo-local directory inside it, and both become unreadable to the developer who runs the build:
+# Postgres initialises DB_DATA_DIR as mode 0700 owned by uid 999, and db-certs writes the key at
+# 600 owned by the same uid. An unreadable DIRECTORY in a context fails the build outright with
+# "error from sender: ... permission denied", before any build step runs, so without these lines
+# make db-build works exactly once and then never again on a dev box.
+#
+# They are runtime state rather than build input, so nothing is lost by excluding them. Excluding
+# certs also keeps a private key out of an image layer. The VM is unaffected either way, because
+# all three of its paths are outside the repo.
+pgdata/
+certs/
+# NOT a current default: LAMIN_HOME now defaults to ~/.clinicalomxdb/lamin, outside the tree. KEEP this
+# line anyway, for the certs reason rather than the permission one. On a dev box whose .env still
+# names the old in-tree ./lamin, that directory holds a real LAMIN_API_KEY and the instance settings
+# carrying the Postgres URI with its password, and excluding it keeps both out of an image layer.
+# The build no longer fails without this line, because make lamin-connect chmods and then chowns the
+# whole tree to the owner of the directory ABOVE LAMIN_HOME, which for the in-tree default is
+# hub-database/ in the developer's own checkout, so the directory stays readable to the developer
+# who runs the build.
+# Not dead, so do not delete it.
+lamin/
