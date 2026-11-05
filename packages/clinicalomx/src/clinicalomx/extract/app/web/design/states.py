@@ -1,31 +1,4 @@
-"""The Build app's state vocabulary: the seven availability states, three verdicts, six kinds.
-
-THIS MODULE IS PRESENTATION ONLY. It says how a state LOOKS; it never says what one means.
-The meaning lives in :mod:`clinicalomx.extract.availability` - ``RoleState`` is the list,
-``_RANK`` is the ladder and ``_WHY`` is the explanation - and a second copy of any of that here
-would drift from it. :func:`why` reads the real one, so a change there reaches the screen.
-
-COLOUR MEANS "THIS NEEDS A HUMAN", AND NOTHING ELSE. Three of the seven states carry no tint at
-all: ``present`` is the unremarkable case, and ``unlinked`` and ``undeclared`` are two kinds of
-nothing that the app cannot know are faults - a Core that carries no thumbnail is not a problem,
-and tinting it would cry wolf on every ROI in the instance. The four that ARE tinted
-(``unplaceable``, ``missing``, ``dangling``, ``denied``) each have a remedy somebody has to carry
-out. So a tinted row in a 120-row table means exactly one thing, which is what makes the table
-scannable; see DESIGN.md, The Quiet Default Rule.
-
-There is deliberately NO GREEN in this system. Tinting the common case green would put the
-loudest colour on the 90% of rows that need no attention, and it would sit one hue away from the
-jade accent. Fully filled, in ink, is what ``present`` looks like.
-
-THE GLYPHS ARE A LADDER, and they carry the whole vocabulary on their own. ``_RANK`` orders the
-states from unusable to usable and the marks encode it: a full square is present, a half square
-is half of what you need, a hollow square is a frame with nothing in it, and a frame that is
-dashed, crossed or absent is one you should not trust. Greyscale, a mono printer and deuteranopia
-all collapse the tint and lose nothing, because the glyph and the word were carrying it.
-
-Copy this file into the Reflex app (suggested: ``<app>/design/states.py``). It imports nothing
-except the availability module it defers to, so it costs nothing to carry.
-"""
+"""The Build app's state vocabulary."""
 from __future__ import annotations
 
 from dataclasses import dataclass
